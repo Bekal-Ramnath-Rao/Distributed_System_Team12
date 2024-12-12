@@ -1,43 +1,91 @@
-import argparse
-import socket
-import sys
+import socket 
+import time
+
+class server:
+
+    def __init__(self,leader,litsen_socket,broadcast_socket):
+        self.leader = leader
+        self.litsen_socket = litsen_socket
+        self.broadcast_socket = broadcast_socket
+    
+    def configure_socket(litsen = False, broadcast = False):
+        if broadcast:
+            # Create a UDP socket
+            server.broadcast_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM,socket.IPPROTO_UDP)
+            # Enable broadcasting mode
+            server.broadcast_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+            return server.broadcast_socket
+        elif litsen:
+            # Create a UDP socket
+            server.listen_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            # Set the socket to broadcast and enable reusing addresses
+            server.listen_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+            server.listen_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            # Bind socket to address and port
+            server.listen_socket.bind(('', BROADCAST_PORT))
+            return server.listen_socket
+
+    def close_socket(broadcast_socket):
+        broadcast_socket.close()
+
+    def broadcast_tobecomeaServer(ip, port, broadcast_message):
+        broadcast_socket = server.configure_socket(broadcast = True)
+        broadcast_socket.sendto(str.encode(broadcast_message), (ip, port))
+        server.close_socket(broadcast_socket)
 
 
-def start_server(host, port):
-    """Start a simple echo server."""
-    try:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
-            server_socket.bind((host, port))
-            server_socket.listen(5)
-            print(f"Server listening on {host}:{port}")
-            
-            while True:
-                client_socket, client_address = server_socket.accept()
-                print(f"Connection received from {client_address}")
-                with client_socket:
-                    while True:
-                        data = client_socket.recv(1024)
-                        if not data:
-                            break
-                        print(f"Received: {data.decode('utf-8')}")
-                        client_socket.sendall(data)  # Echo data back to client
-                        print(f"Sent: {data.decode('utf-8')}")
-    except Exception as e:
-        print(f"Server error: {e}")
-        sys.exit(1)
+    def check_firstServer():
+        # Listening port
+        BROADCAST_PORT = 5973
+        Data_Received = False
+        # Local host information
+        MY_HOST = socket.gethostname()
+        MY_IP = socket.gethostbyname(MY_HOST)
 
+        print("Listening to message from Leader server to join the group")
+        while time.sleep(10):
+            server.listen_socket = server.configure_socket(litsen = True)
+            data, addr = server.listen_socket.recvfrom(1024)
+            if data:
+                print("Received broadcast message:", data.decode())
+                break
+            else:
+                Data_Received = True
+        return Data_Received
 
+    def check_joinThegroup():
+        if not server.leader:
+            data, addr = server.listen_socket.recvfrom(1024)
+            if MY_IP in data:
+                return True
+            else:
+                return False
 
-def main():
-    print("Server here")
-    parser = argparse.ArgumentParser(description="Simple Python Server")
-    parser.add_argument("--host", type=str, default="127.0.0.1", help="Host IP address")
-    parser.add_argument("--port", type=int, default=8080, help="Port to listen on")
+    def get_groupView():
+        ''
+    
+    def setleader():
+        server.leader = True
 
-    args = parser.parse_args()
-    start_server(args.host, args.port)
+if __name__ == '__main__':
+    # Broadcast address and port
+    BROADCAST_IP = "192.168.56.255"
+    BROADCAST_PORT = 5001
 
-main()
+    # Local host information
+    MY_HOST = socket.gethostname()
+    MY_IP = socket.gethostbyname(MY_HOST)
 
-if __name__ == "__main__":
-    main()
+    # Send broadcast message
+    message = 'I want to be server'
+    server.broadcast_tobecomeaServer(BROADCAST_IP, BROADCAST_PORT, message)
+    if server.check_firstServer():
+        server.setleader()
+    else:
+        if(server.check_joinThegroup()):
+            server.get_groupView()
+    
+    if(server.leader):
+        manage_requestfromClient()
+        do_Replication()
+        maintain_heartbeatMechanism()
