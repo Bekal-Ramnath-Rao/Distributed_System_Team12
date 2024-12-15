@@ -1,5 +1,7 @@
 import socket 
 import time
+import managing_request
+import socket_handler
 
 class server:
 
@@ -8,31 +10,10 @@ class server:
         self.litsen_socket = litsen_socket
         self.broadcast_socket = broadcast_socket
     
-    def configure_socket(litsen = False, broadcast = False):
-        if broadcast:
-            # Create a UDP socket
-            server.broadcast_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM,socket.IPPROTO_UDP)
-            # Enable broadcasting mode
-            server.broadcast_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-            return server.broadcast_socket
-        elif litsen:
-            # Create a UDP socket
-            server.listen_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            # Set the socket to broadcast and enable reusing addresses
-            server.listen_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-            server.listen_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            # Bind socket to address and port
-            server.listen_socket.bind(('', BROADCAST_PORT))
-            return server.listen_socket
-
-    def close_socket(broadcast_socket):
-        broadcast_socket.close()
-
     def broadcast_tobecomeaServer(ip, port, broadcast_message):
-        broadcast_socket = server.configure_socket(broadcast = True)
+        broadcast_socket = socket_handler.configure_socket_UDP(broadcast = True)
         broadcast_socket.sendto(str.encode(broadcast_message), (ip, port))
-        server.close_socket(broadcast_socket)
-
+        socket_handler.close_socket(broadcast_socket)
 
     def check_firstServer():
         # Listening port
@@ -44,7 +25,7 @@ class server:
 
         print("Listening to message from Leader server to join the group")
         while time.sleep(10):
-            server.listen_socket = server.configure_socket(litsen = True)
+            server.listen_socket = socket_handler.configure_socket_UDP(litsen = True)
             data, addr = server.listen_socket.recvfrom(1024)
             if data:
                 print("Received broadcast message:", data.decode())
@@ -86,6 +67,6 @@ if __name__ == '__main__':
             server.get_groupView()
     
     if(server.leader):
-        manage_requestfromClient()
+        managing_request.managingRequestfromClient.getRequestfromclient()
         do_Replication()
         maintain_heartbeatMechanism()
