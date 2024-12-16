@@ -1,29 +1,60 @@
 import argparse
 import socket
 import sys
+from server.socket_handler import *
 
-def start_client(host, port, message):
-    """Start a client to connect to the server."""
-    try:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
-            client_socket.connect((host, port))
-            print(f"Connected to server at {host}:{port}")
-            client_socket.sendall(message.encode('utf-8'))
-            print(f"Sent: {message}")
-            response = client_socket.recv(1024)
-            print(f"Received: {response.decode('utf-8')}")
-    except Exception as e:
-        print(f"Client error: {e}")
-        sys.exit(1)
+class Client():
+    def __init__(self,broadcast_address,broadcast_port,args):
+        super(Client,self).__init__()
+        # Create a UDP socket
+        self.udp_socket = configure_socket_UDP(False,True)               
+        #Create a TCP socket
+        self.tcp_socket = configuresocketTCP()
+        self.buffer_size = 4096
+        self.leader_address = self.server_connect(broadcast_address,broadcast_port,args)                       #Tuple representing the IP and Port of the leader server      
+        #Connecting to the leader server   
+        self.tcp_socket.connect(self.leader_address)
+
+    def server_connect(self,broadcast_address,broadcast_port,arg):        
+        message = 'Hi I am client,'+str(arg)
+        # Send data
+        sendmessagethroughUDP(self.udp_socket,message.encode(),(broadcast_address, broadcast_port))
+        print('Sent to server: ', message)
+        # Receive response
+        print('Waiting for response...')
+        data, server = self.udp_socket.recvfrom(self.buffer_size)
+        print("Message received from leader at ",server)
+        return server                                                
+
+    def buy_sell_stocks(self,message):
+        sendMessagethroughTCPSocket(self.tcp_socket,message)
+        print("Sent Trading information & Waiting for response...")
+        data,server = recvMessagefromTCPSocket(self.tcp_socket)
+        print("Received response ",data)
+        
+    def close_connection(self):    
+        self.tcp_socket.close()
+        print('Socket Closed')
 
 def main():
-    parser = argparse.ArgumentParser(description="Simple Python Client")
-    parser.add_argument("--host", type=str, default="127.0.0.1", help="Server IP address")
-    parser.add_argument("--port", type=int, default=8080, help="Server port")
-    parser.add_argument("--message", type=str, required=True, help="Message to send to the server")
-
-    args = parser.parse_args()
-    start_client(args.host, args.port, args.message)
+    arg = sys.argv
+    broadcast_address = '<broadcast>'
+    broadcast_port = 12345
+    #queue = Queue()
+    #Starting a Process
+    #p = Process(target=Client, args=(broadcast_address, broadcast_port,arg,queue))
+    #p.start()
+    #p.join
+    client_object = Client(broadcast_address,broadcast_port,arg[1])
+    try:
+        while True:
+            user_input = input("Enter your activity ")
+            if user_input.strip():
+                client_object.buy_sell_stocks(user_input)
+    except Exception as e:
+            print(f"Error during trading: {e}") 
+    finally:
+        client_object.close_connection()
 
 if __name__ == "__main__":
     main()
