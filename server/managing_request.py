@@ -1,5 +1,5 @@
 import socket_handler
-from share_handler import share_handler
+import share_handler
 
 class managingRequestfromClient:
 

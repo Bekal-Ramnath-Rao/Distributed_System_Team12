@@ -55,9 +55,9 @@ def accepttheConnection(TCP_socket):
     client_socket, client_address = TCP_socket.accept()
     return client_socket
 
-def tcpsocketforServer(client_address):
+def tcpsocketforServer():
     server_scoket = configuresocketTCP()
     bindtoaAddress(server_scoket, client_address)
     litsentoaSocket(server_scoket)
-    client_socket = accepttheConnection(server_scoket)
-    return server_scoket, client_socket
+    client_socket, client_address = accepttheConnection(server_scoket)
+    return server_scoket, client_socket, client_address
