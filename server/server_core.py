@@ -3,9 +3,10 @@ import threading
 from share_handler import share_handler
 from managing_request import managingRequestfromClient
 
-def handle_client(conn, client_address, sharehandler, clientsharehandler):
+def handle_client(conn, client_address, sharehandler):
     """Handle communication with a single client."""
     print(f"TCP connection established with {client_address}")
+    flag = False
     try:
         while True:
             # Receive a message from the client
@@ -15,28 +16,36 @@ def handle_client(conn, client_address, sharehandler, clientsharehandler):
                 break
             else:
                 filtered_string = list(client_message.split())
-                client_share = managingRequestfromClient(sharehandler, clientsharehandler)
-
-                if 'b' == filtered_string[1]:
+                if(flag == False):
+                    clientsharehandler = share_handler.clientshare_handler(0, 0, filtered_string[0])
+                    client_share = managingRequestfromClient(sharehandler, clientsharehandler, filtered_string[0])
+                    flag = True
+                if filtered_string[1] == 'b' or filtered_string[1] =='B' :
                     number_of_shares = int(filtered_string[3])
                     name_of_the_share = filtered_string[2]
                     transaction_result = client_share.executetheBuyrequest(number_of_shares, name_of_the_share)
-                if 's' == filtered_string[1]:
+                    if(transaction_result):
+                        server_response = "Transaction successful"
+                        conn.send(server_response.encode())
+                    else:
+                        server_response = "Transaction failed"
+                        conn.send(server_response.encode())
+                if filtered_string[1] == 's' or filtered_string[1] =='S':
                     number_of_shares = int(filtered_string[3])
                     name_of_the_share = filtered_string[2]
                     transaction_result = client_share.executetheSellrequest(number_of_shares, name_of_the_share)
-                elif 'i' or 'I' in filtered_string[1]:
-                    client_share.executetheInquiryrequest()
+                    if(transaction_result):
+                        server_response = "Transaction successful"
+                        conn.send(server_response.encode())
+                    else:
+                        server_response = "Transaction failed"
+                        conn.send(server_response.encode())
+                elif filtered_string[1] == 'i' or filtered_string[1] =='I':
+                    Data = client_share.executetheInquiryrequest()
+                    Data = str(Data)
+                    conn.send(Data.encode())
 
             print(f"Received message from {client_address}: {client_message}")
-
-            # Send a response back to the client
-            if(transaction_result):
-                server_response = "Transaction successful"
-                conn.send(server_response.encode())
-            else:
-                server_response = "Transaction failed"
-                conn.send(server_response.encode())
 
             # Optionally terminate the connection if the server sends 'exit'
             if server_response.lower() == "exit":
@@ -48,7 +57,7 @@ def handle_client(conn, client_address, sharehandler, clientsharehandler):
         conn.close()
         print(f"Connection closed with {client_address}.")
 
-def tcp_server(tcp_port, sharehandler, clientsharehandler):
+def tcp_server(tcp_port, sharehandler):
     """Handle multiple clients via TCP."""
     # Create a TCP socket
     tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -62,7 +71,7 @@ def tcp_server(tcp_port, sharehandler, clientsharehandler):
             conn, client_address = tcp_socket.accept()
 
             # Start a new thread to handle the client
-            client_thread = threading.Thread(target=handle_client, args=(conn, client_address, sharehandler, clientsharehandler))
+            client_thread = threading.Thread(target=handle_client, args=(conn, client_address, sharehandler))
             client_thread.start()
             print(f"Started thread for client {client_address}")
 
@@ -107,6 +116,5 @@ if __name__ == '__main__':
     udp_thread = threading.Thread(target=udp_server, args=(UDP_PORT, TCP_PORT))
     udp_thread.start()
     sharehandler = share_handler.share_handler()
-    clientsharehandler = share_handler.clientshare_handler(0, 0)
     # Start the TCP server to handle multiple clients
-    tcp_server(TCP_PORT, sharehandler, clientsharehandler)
+    tcp_server(TCP_PORT, sharehandler)

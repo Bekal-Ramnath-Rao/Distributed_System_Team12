@@ -1,10 +1,12 @@
 import socket_handler
-import share_handler
+from share_handler import share_handler
 
 class managingRequestfromClient:
 
-    def __init__(self):
-        ''
+    def __init__(self, sharehandler, clientsharehandler, name_of_the_client):
+        self.sharehandler = sharehandler
+        self.clientsharehandler = clientsharehandler
+        self.name_of_the_client = name_of_the_client
 
     def getRequestfromclient(self):
         print("Listening to message from client who wants to trade")
@@ -24,22 +26,22 @@ class managingRequestfromClient:
         if 'b' or 'B' in filtered_string[0]:
             number_of_shares = str.translate(filtered_string[-1])
             name_of_the_share = filtered_string[1]
-            return managingRequestfromClient.executetheBuyrequest(number_of_shares, name_of_the_share)
-        if 'b' or 'B' in filtered_string[0]:
+            return self.sharehandler.buy(number_of_shares, name_of_the_share)
+        if 's' or 'S' in filtered_string[0]:
             number_of_shares = str.translate(filtered_string[-1])
             name_of_the_share = filtered_string[1]
-            return managingRequestfromClient.executetheSellrequest(number_of_shares, name_of_the_share)
+            return self.sharehandler.sell(number_of_shares, name_of_the_share, self.clientsharehandler)
         elif 'i' or 'I' in filtered_string[0]:
-            return managingRequestfromClient.executetheInquiryrequest()
+            pass
 
     def executetheBuyrequest(self, number_of_shares, name_of_the_share):
-        share_handler.share_handler.buy(number_of_shares, name_of_the_share)
+        return self.sharehandler.buy(number_of_shares, name_of_the_share, self.clientsharehandler, self.name_of_the_client)
 
-    def executetheSellrequest(self, number_of_shares, name_of_the_share):
-        share_handler.share_handler.sell(number_of_shares, name_of_the_share)
+    def executetheSellrequest(self,number_of_shares, name_of_the_share):
+        return self.sharehandler.sell(number_of_shares, name_of_the_share, self.clientsharehandler, self.name_of_the_client)
     
     def executetheInquiryrequest(self):
-        share_handler.share_handler.inquiry()
+        return self.sharehandler.inquiry(self.clientsharehandler, self.name_of_the_client)
 
     def maketheReplication(self):
         'will be implemented once replication handler is implemented'
