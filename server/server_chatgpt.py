@@ -94,6 +94,7 @@ def connect_to_neighbors(server_group, tcp_port):
 def neighbor_listener(tcp_port):
     """Start a TCP server to accept connections from neighbors."""
     tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    # set or define the port number
     tcp_socket.bind(("127.0.0.1", tcp_port))  # Bind to all interfaces
     tcp_socket.listen(5)
     print(f"Server listening for neighbor connections on TCP port {tcp_port}...")
@@ -237,7 +238,7 @@ def leader_election(udp_port, broadcast_ip):
             return False, server_group  # This server is not the leader
     except socket.timeout:
         print("No leader found. Declaring self as leader.")
-        return True  # This server becomes the leader
+        return True, []  # This server becomes the leader
     finally:
         udp_socket.close()
 
@@ -248,15 +249,19 @@ def start_election(is_leader, participant_ip_data, server_group):
         election = lcr_election_handler(participant_ip_data, server_group)
         print("server group is ", server_group)
         election.form_ring()
-        (neighbour_ip, neighbour_port) = election.get_neighbour()
-        print(f"Neighbour is: {neighbour_ip}:{neighbour_port}")
+        left_neighbour_ip, left_neighbour_port = election.get_neighbour()
+        print(f"Left Neighbour is: {left_neighbour_ip}:{left_neighbour_port}")
+        right_neighbour_ip, right_neighbour_port = election.get_neighbour(direction="right")
+        print(f"Right Neighbour is: {right_neighbour_ip}:{right_neighbour_port}")
         # connect_to_neighbors(server_group, SERVER_TCP_PORT)
         # establish TCP here
-        client_socket = socket_handler.tcpsocketforclient(neighbour_ip, neighbour_port)
-        neighbor_thread = threading.Thread(
-            target=neighbor_listener, args=(client_socket)
-        )
-        neighbor_thread.start()
+        client_socket = socket_handler.tcpsocketforclient(left_neighbour_ip, left_neighbour_port)
+
+        # neighbor_listener()
+        # neighbor_thread = threading.Thread(
+            # target=neighbor_listener, args=(client_socket)
+        # )
+        # neighbor_thread.start()
     # election.initiate_election()
 
 
@@ -265,7 +270,6 @@ if __name__ == "__main__":
     BROADCAST_IP = "192.168.0.255"
     # Perform leader election
     IS_LEADER, server_group = leader_election(SERVER_UDP_PORT, BROADCAST_IP)
-    server_group = ast.literal_eval(server_group)
 
     if IS_LEADER:
         sharehandler = share_handler.share_handler()
@@ -273,6 +277,7 @@ if __name__ == "__main__":
         MY_IP = socket.gethostbyname(MY_HOST)
         server_group.append((MY_IP, SERVER_TCP_PORT))
     else:
+        server_group = ast.literal_eval(server_group)
         election_thread = threading.Thread(
             target=start_election,
             args=(

@@ -47,9 +47,9 @@ class lcr_election_handler:
                     # return self.ring[current_node_index + 1]
             else:
                 if current_node_index == 0:
-                    return self.ring[len(self.ring) - 1]
+                    return self.get_tuple_by_ip(self.ring[len(self.ring) - 1]) 
                 else:
-                    return self.ring[current_node_index - 1]
+                    return self.get_tuple_by_ip(self.ring[current_node_index - 1]) 
         else:
             return None
 
