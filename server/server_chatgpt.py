@@ -3,6 +3,9 @@ import threading
 import time
 from share_handler import share_handler
 from managing_request import managingRequestfromClient
+from election_handler import lcr_election_handler
+import socket_handler
+import ast
 
 LEADER_HOST = None  # The leader's host address (dynamically updated)
 LEADER_TCP_PORT = None  # The leader's TCP port (dynamically updated)
@@ -204,6 +207,16 @@ def update_ip_list(ip_list, new_tuple):
     return list(ip_dict.values())
 
 
+def get_machines_ip():
+    udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+    udp_socket.connect(
+        ("8.8.8.8", 80)
+    )  # Google's public DNS server (doesn't send actual data)
+    print("local IP is ", udp_socket.getsockname()[0])
+    return udp_socket.getsockname()[0]
+
+
 def leader_election(udp_port, broadcast_ip):
     """Perform leader election by broadcasting and waiting for a response."""
     udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -218,9 +231,10 @@ def leader_election(udp_port, broadcast_ip):
         if message.decode().startswith("ACK_LEADER"):
             leader_port = int(message.decode().split()[1])
             global LEADER_HOST, LEADER_TCP_PORT
+            server_group = message.decode()[30:]
             LEADER_HOST, LEADER_TCP_PORT = server_address[0], leader_port
             print(f"Leader acknowledged at {LEADER_HOST}:{LEADER_TCP_PORT}.")
-            return False  # This server is not the leader
+            return False, server_group  # This server is not the leader
     except socket.timeout:
         print("No leader found. Declaring self as leader.")
         return True  # This server becomes the leader
@@ -228,18 +242,48 @@ def leader_election(udp_port, broadcast_ip):
         udp_socket.close()
 
 
+def start_election(is_leader, participant_ip_data, server_group):
+    # global server_group
+    if not is_leader:
+        election = lcr_election_handler(participant_ip_data, server_group)
+        print("server group is ", server_group)
+        election.form_ring()
+        (neighbour_ip, neighbour_port) = election.get_neighbour()
+        print(f"Neighbour is: {neighbour_ip}:{neighbour_port}")
+        # connect_to_neighbors(server_group, SERVER_TCP_PORT)
+        # establish TCP here
+        client_socket = socket_handler.tcpsocketforclient(neighbour_ip, neighbour_port)
+        neighbor_thread = threading.Thread(
+            target=neighbor_listener, args=(client_socket)
+        )
+        neighbor_thread.start()
+    # election.initiate_election()
+
+
 if __name__ == "__main__":
     sharehandler = None
     BROADCAST_IP = "192.168.0.255"
     # Perform leader election
-    IS_LEADER = leader_election(SERVER_UDP_PORT, BROADCAST_IP)
+    IS_LEADER, server_group = leader_election(SERVER_UDP_PORT, BROADCAST_IP)
+    server_group = ast.literal_eval(server_group)
 
     if IS_LEADER:
         sharehandler = share_handler.share_handler()
         MY_HOST = socket.gethostname()
         MY_IP = socket.gethostbyname(MY_HOST)
         server_group.append((MY_IP, SERVER_TCP_PORT))
-
+    else:
+        election_thread = threading.Thread(
+            target=start_election,
+            args=(
+                IS_LEADER,
+                get_machines_ip(),
+                server_group,
+            ),
+        )
+        time.sleep(3)  # Wait for the leader to
+        election_thread.start()
+    #     lcr_election_handler()
     # Start the UDP server in a separate thread
     udp_thread = threading.Thread(
         target=udp_server, args=(SERVER_UDP_PORT, SERVER_TCP_PORT, IS_LEADER)
@@ -247,13 +291,13 @@ if __name__ == "__main__":
     udp_thread.start()
 
     # Start neighbor listener in a separate thread
-    neighbor_thread = threading.Thread(
-        target=neighbor_listener, args=(SERVER_TCP_PORT,)
-    )
-    neighbor_thread.start()
+    # neighbor_thread = threading.Thread(
+    #     target=neighbor_listener, args=(SERVER_TCP_PORT,)
+    # )
+    # neighbor_thread.start()
 
     # Connect to neighbors
-    connect_to_neighbors(server_group, SERVER_TCP_PORT)
+    # connect_to_neighbors(server_group, SERVER_TCP_PORT)
 
     # Start the TCP server (only if leader)
     tcp_server(SERVER_TCP_PORT, sharehandler, IS_LEADER)

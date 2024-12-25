@@ -44,20 +44,32 @@ def recvMessagefromTCPSocket(socket):
 
 def bindtoaAddress(TCP_socket,host,port):
     # Bind the socket to the host and port
+    print("Binding the socket to the host and port ", host," ", port)
     TCP_socket.bind((host, port))
 
 def litsentoaSocket(TCP_socket):
     #litsening to socket
-    TCP_socket.litsen(1)
+    TCP_socket.listen(1)
 
 def accepttheConnection(TCP_socket):
     #accepting the connection
     client_socket, client_address = TCP_socket.accept()
+    return client_socket, client_address
+
+def tcpsocketforServer(client_ip_address, client_port):
+    server_socket = configuresocketTCP()
+    bindtoaAddress(server_socket, client_ip_address, client_port)
+    litsentoaSocket(server_socket)
+    client_socket, client_ip_address = accepttheConnection(server_socket)
+    return server_socket, client_socket, client_ip_address
+
+def tcpsocketforclient(server_ip_address, server_port):
+    client_socket = configuresocketTCP()
+    connecttoServer(client_socket, server_ip_address, server_port)
+    print(f"Connected to server at {server_ip_address}:{server_port}")
+    message = "Hello, starting leader election!"
+    client_socket.send(message.encode())
+    print(f"Sent to server: {message}")
     return client_socket
 
-def tcpsocketforServer():
-    server_scoket = configuresocketTCP()
-    bindtoaAddress(server_scoket, client_address)
-    litsentoaSocket(server_scoket)
-    client_socket, client_address = accepttheConnection(server_scoket)
-    return server_scoket, client_socket, client_address
+

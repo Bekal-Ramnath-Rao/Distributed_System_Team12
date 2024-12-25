@@ -7,7 +7,8 @@ class lcr_election_handler:
     # which port to pass here?
     def __init__(self, ip, group_view, ip_vs_tcp_socket_mapping=None):
         # self.lcr = lcr
-        self.members = group_view  # group view
+        self.group_view = group_view
+        self.members = [item[0] for item in group_view]  # group view
         # who will pass this list to this class? and these members are identified before or after the election starts?
         self.ring = []
         self.is_leader = False
@@ -27,15 +28,23 @@ class lcr_election_handler:
         sorted_ip_ring = [socket.inet_ntoa(node) for node in sorted_binary_ring]
         self.ring = sorted_ip_ring
         # return sorted_ip_ring
-
+    
+    def get_tuple_by_ip(self, ip_address):
+        for item in self.group_view:
+            if item[0] == ip_address:
+                return item
+        return None
+    
     def get_neighbour(self, direction="left"):
         current_node_index = self.ring.index(self.ip) if self.ip in self.ring else -1
         if current_node_index != -1:
             if direction == "left":
                 if current_node_index + 1 == len(self.ring):
-                    return self.ring[0]
+                    # return self.ring[0]
+                    return self.get_tuple_by_ip(self.ring[0])
                 else:
-                    return self.ring[current_node_index + 1]
+                    return self.get_tuple_by_ip(self.ring[current_node_index + 1])
+                    # return self.ring[current_node_index + 1]
             else:
                 if current_node_index == 0:
                     return self.ring[len(self.ring) - 1]
