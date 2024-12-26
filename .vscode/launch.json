@@ -1,0 +1,22 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "serverchatgpt",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}\\server\\server_chatgpt.py",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "clientchatgpt",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}\\client\\client_chatgpt_new.py",
+            "console": "integratedTerminal"
+        }
+    ]
+}
