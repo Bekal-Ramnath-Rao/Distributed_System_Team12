@@ -12,9 +12,16 @@ LEADER_TCP_PORT = None  # The leader's TCP port (dynamically updated)
 SERVER_UDP_PORT = 12345
 SERVER_TCP_PORT = 12346
 TIMEOUT = 5  # Timeout for leader election (in seconds)
+is_server_group_updated = False
+i_initiated_election = False
 
 server_group = []  # List of (host, port) tuples for all servers in the group
 neighbor_sockets = []  # List of active neighbor connections
+
+
+class central_data:
+    def __init__(self):
+        pass
 
 
 def handle_client(conn, client_address, sharehandler):
@@ -140,7 +147,7 @@ def tcp_server(tcp_port, sharehandler, is_leader):
 
 def udp_server(udp_port, tcp_port, is_leader_flag):
     """Handle UDP communication for leader election, server group management, and client communication."""
-    global LEADER_HOST, LEADER_TCP_PORT, server_group
+    global LEADER_HOST, LEADER_TCP_PORT, server_group, is_server_group_updated
 
     udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -177,17 +184,31 @@ def udp_server(udp_port, tcp_port, is_leader_flag):
                     leader_info = f"LEADER {tcp_port}"
                     udp_socket.sendto(leader_info.encode(), client_address)
                     print(f"Sent leader information to client {client_address}.")
+                elif message == "SEND_SERVER_GROUP":
+                    server_group = update_ip_list(server_group, client_address)
+                    server_group_str = "UPDATED_SERVER_GROUP " + str(server_group)
+                    print(
+                        "server group before sending to all clients is ",
+                        server_group_str,
+                    )
+                    print(client_address)
+                    udp_socket.sendto(server_group_str.encode(), ("192.168.0.255", 12345))
+                    print(f"Sent server group to ALL clients")
             else:
                 # Followers listen for leader acknowledgment or respond to client inquiries
                 if message.startswith("ACK_LEADER"):
                     leader_port = int(message.split()[1])
                     LEADER_HOST, LEADER_TCP_PORT = client_address[0], leader_port
                     print(f"Leader found at {LEADER_HOST}:{LEADER_TCP_PORT}.")
-                # elif message == "WHO_IS_LEADER":
-                #     if LEADER_HOST and LEADER_TCP_PORT:
-                #         leader_info = f"LEADER {LEADER_TCP_PORT}"
-                #         udp_socket.sendto(leader_info.encode(), client_address)
-                #         print(f"Sent leader information to client {client_address}.")
+                    udp_socket.sendto("SEND_SERVER_GROUP".encode(), client_address)
+                elif message.startswith("UPDATED_SERVER_GROUP"):
+                    print("within updated server group")
+                    server_group = ast.literal_eval(message[21:])
+                    is_server_group_updated = True
+                    print("updated server group from leader is", server_group)
+                    # update the server group here
+                else:
+                    print("no idea")
 
         except KeyboardInterrupt:
             print("Shutting down UDP server.")
@@ -243,26 +264,42 @@ def leader_election(udp_port, broadcast_ip):
         udp_socket.close()
 
 
-def start_election(is_leader, participant_ip_data, server_group):
-    # global server_group
-    if not is_leader:
-        election = lcr_election_handler(participant_ip_data, server_group)
-        print("server group is ", server_group)
-        election.form_ring()
-        left_neighbour_ip, left_neighbour_port = election.get_neighbour()
-        print(f"Left Neighbour is: {left_neighbour_ip}:{left_neighbour_port}")
-        right_neighbour_ip, right_neighbour_port = election.get_neighbour(direction="right")
-        print(f"Right Neighbour is: {right_neighbour_ip}:{right_neighbour_port}")
-        # connect_to_neighbors(server_group, SERVER_TCP_PORT)
-        # establish TCP here
-        client_socket = socket_handler.tcpsocketforclient(left_neighbour_ip, left_neighbour_port)
+def start_election(udp_port, broadcast_ip):
+    """Start the election process by sending messages to neighbors."""
+    global i_initiated_election
+    # broadcast to server that election will be initiated and send the server group
+    udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 
-        # neighbor_listener()
-        # neighbor_thread = threading.Thread(
-            # target=neighbor_listener, args=(client_socket)
-        # )
-        # neighbor_thread.start()
-    # election.initiate_election()
+    print("Asking server to broadcast server group...")
+    udp_socket.sendto("SEND_SERVER_GROUP".encode(), (broadcast_ip, udp_port))
+    i_initiated_election = True
+    # use this when we do not receive a response of server_group from leader
+    # this happens when the leader is not present
+    # TODO this later
+    # udp_socket.settimeout(TIMEOUT)
+
+
+def udp_server_managing_election(udp_socket, lcr_obj, is_leader):
+    server_group = []
+    while True:
+        if is_server_group_updated:
+            lcr_obj.form_members(server_group)
+            lcr_obj.form_ring()
+            # lcr_obj.get_neighbour()
+            is_server_group_updated = False
+        if i_initiated_election:
+            lcr_obj.initiate_election()
+        data, addr = udp_socket.recvfrom(1024)  # Buffer size of 1024 bytes
+        message = data.decode().strip()
+        lcr.process_received_message(message)
+        print(f"Received message from neighbour: {message} from {addr}")
+        # i think updating can be moved to a separate function, but members has to be created here
+        # If "OK" message is received, send a unicast message
+        if message == "OK":
+            response_message = "ACKNOWLEDGED: Leader acknowledged your message."
+            udp_socket.sendto(response_message.encode(), (neighbour_ip, 11111))
+            print(f"Sent unicast message to {addr}: {response_message}")
 
 
 if __name__ == "__main__":
@@ -271,6 +308,19 @@ if __name__ == "__main__":
     # Perform leader election
     IS_LEADER, server_group = leader_election(SERVER_UDP_PORT, BROADCAST_IP)
 
+    lcr_obj = lcr_election_handler(get_machines_ip(), [])
+    # create a UDP server just for handling election messages
+    udp_socket_listener_for_election = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    udp_socket_listener_for_election.setsockopt(
+        socket.SOL_SOCKET, socket.SO_REUSEADDR, 1
+    )
+    udp_socket_listener_for_election.bind(("", 11111))
+    udp_thread_for_election = threading.Thread(
+        target=udp_server_managing_election,
+        args=(udp_socket_listener_for_election, lcr_obj, IS_LEADER),
+    )
+    udp_thread_for_election.start()
+
     if IS_LEADER:
         sharehandler = share_handler.share_handler()
         MY_HOST = socket.gethostname()
@@ -278,16 +328,17 @@ if __name__ == "__main__":
         server_group.append((MY_IP, SERVER_TCP_PORT))
     else:
         server_group = ast.literal_eval(server_group)
-        election_thread = threading.Thread(
-            target=start_election,
-            args=(
-                IS_LEADER,
-                get_machines_ip(),
-                server_group,
-            ),
-        )
-        time.sleep(3)  # Wait for the leader to
-        election_thread.start()
+        start_election(SERVER_UDP_PORT, BROADCAST_IP)
+        # election_thread = threading.Thread(
+        #     target=start_election,
+        #     args=(
+        #         IS_LEADER,
+        #         get_machines_ip(),
+        #         server_group,
+        #     ),
+        # )
+        # time.sleep(3)  # Wait for the leader to
+        # election_thread.start()
     #     lcr_election_handler()
     # Start the UDP server in a separate thread
     udp_thread = threading.Thread(
@@ -306,3 +357,6 @@ if __name__ == "__main__":
 
     # Start the TCP server (only if leader)
     tcp_server(SERVER_TCP_PORT, sharehandler, IS_LEADER)
+
+    # one UDP server where it just listens
+    # one UDP client which just sends, here we do not need to establish connection

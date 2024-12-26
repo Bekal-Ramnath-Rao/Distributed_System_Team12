@@ -8,7 +8,7 @@ class lcr_election_handler:
     def __init__(self, ip, group_view, ip_vs_tcp_socket_mapping=None):
         # self.lcr = lcr
         self.group_view = group_view
-        self.members = [item[0] for item in group_view]  # group view
+        self.members = []  # group view
         # who will pass this list to this class? and these members are identified before or after the election starts?
         self.ring = []
         self.is_leader = False
@@ -19,6 +19,9 @@ class lcr_election_handler:
         self.uid = uuid.uuid1()  # Generating a Version 1 UUID
         self.leader_uid = None
 
+    def form_members(self, group_view):
+        self.members = [item[0] for item in group_view]
+
     def form_ring(self):
         # server core can call this function to form a ring
         sorted_binary_ring = sorted(
@@ -28,13 +31,13 @@ class lcr_election_handler:
         sorted_ip_ring = [socket.inet_ntoa(node) for node in sorted_binary_ring]
         self.ring = sorted_ip_ring
         # return sorted_ip_ring
-    
+
     def get_tuple_by_ip(self, ip_address):
         for item in self.group_view:
             if item[0] == ip_address:
                 return item
         return None
-    
+
     def get_neighbour(self, direction="left"):
         current_node_index = self.ring.index(self.ip) if self.ip in self.ring else -1
         if current_node_index != -1:
@@ -47,27 +50,33 @@ class lcr_election_handler:
                     # return self.ring[current_node_index + 1]
             else:
                 if current_node_index == 0:
-                    return self.get_tuple_by_ip(self.ring[len(self.ring) - 1]) 
+                    return self.get_tuple_by_ip(self.ring[len(self.ring) - 1])
                 else:
-                    return self.get_tuple_by_ip(self.ring[current_node_index - 1]) 
+                    return self.get_tuple_by_ip(self.ring[current_node_index - 1])
         else:
             return None
 
-    def send_election_msg(self, participant_id, is_leader):
+    def send_election_msg(self, participant_id, is_leader, neighbour_socket):
         # pack into JSON and send
         # use socket function implemented by ramnath here
         # use logging module to log the messages
         # ensure only one way messaging is present
         election_message = {"mid": participant_id, "is_leader ": is_leader}
         # here we need the neighbouring server's socket, fetch the TCP socket of neighbour from the dictionary ip_vs_tcp_socket_mapping
-        sendMessagethroughTCPSocket(
-            client_socket, json.dumps(election_message).encode()
+        # sendMessagethroughTCPSocket(
+        #     client_socket, json.dumps(election_message).encode()
+        # )
+        neighbour_socket.sendto(
+            json.dumps(election_message).encode(), (self.get_neighbour(), 11111)
         )
 
     def initiate_election(self):
         self.is_a_pariticipant = False
         self.send_election_msg(self.participant_id, self.is_leader)
         print("Election initiated by: " + str(self.participant_id))
+    
+    def get_leader_status(self):
+        return self.is_leader
 
     def process_received_message(self, message):
         # from socket the message is received
@@ -98,6 +107,7 @@ class lcr_election_handler:
         elif election_message["mid"] == self.uid:
             print("Election completed, leader is: " + str(self.uid))
             self.leader_uid = self.uid
+            self.is_leader = True
             # new_election_message = {"mid": my_uid, "isLeader ": True}
             # send new election message to left neighbour
             self.is_a_pariticipant = False
