@@ -161,9 +161,10 @@ def udp_server(udp_port, tcp_port, is_leader_flag):
         print(
             f"Follower server is waiting for broadcast messages on UDP port {udp_port}..."
         )
-
+    //time.sleep(2)
     while True:
         try:
+            print("before recv")
             message, client_address = udp_socket.recvfrom(4096)
             message = message.decode()
             print(f"Received message '{message}' from {client_address}")
@@ -192,7 +193,9 @@ def udp_server(udp_port, tcp_port, is_leader_flag):
                         server_group_str,
                     )
                     print(client_address)
-                    udp_socket.sendto(server_group_str.encode(), ("192.168.0.255", 12345))
+                    udp_socket.sendto(
+                        server_group_str.encode(), ("192.168.0.255", 12345)
+                    )
                     print(f"Sent server group to ALL clients")
             else:
                 # Followers listen for leader acknowledgment or respond to client inquiries
@@ -230,13 +233,13 @@ def update_ip_list(ip_list, new_tuple):
 
 
 def get_machines_ip():
-    udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-    udp_socket.connect(
+    udp_socket_for_ip_retrieval = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    udp_socket_for_ip_retrieval.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+    udp_socket_for_ip_retrieval.connect(
         ("8.8.8.8", 80)
     )  # Google's public DNS server (doesn't send actual data)
-    print("local IP is ", udp_socket.getsockname()[0])
-    return udp_socket.getsockname()[0]
+    print("local IP is ", udp_socket_for_ip_retrieval.getsockname()[0])
+    return udp_socket_for_ip_retrieval.getsockname()[0]
 
 
 def leader_election(udp_port, broadcast_ip):
@@ -276,30 +279,40 @@ def start_election(udp_port, broadcast_ip):
     i_initiated_election = True
     # use this when we do not receive a response of server_group from leader
     # this happens when the leader is not present
-    # TODO this later
     # udp_socket.settimeout(TIMEOUT)
 
 
 def udp_server_managing_election(udp_socket, lcr_obj, is_leader):
-    server_group = []
+    # server_group = []
+    global is_server_group_updated, i_initiated_election, server_group
+    print("inside election thread")
     while True:
-        if is_server_group_updated:
+        # if is_server_group_updated:
+        #     pass
+        # lcr_obj.get_neighbour()
+        if i_initiated_election and is_server_group_updated:
+            print("if is")
+            lcr_obj.group_view = server_group
             lcr_obj.form_members(server_group)
             lcr_obj.form_ring()
-            # lcr_obj.get_neighbour()
+            lcr_obj.neighbour = lcr_obj.get_neighbour()[0]
+            print("neigbour", lcr_obj.neighbour)
+            print("formed ring")
+            i_initiated_election = False
             is_server_group_updated = False
-        if i_initiated_election:
             lcr_obj.initiate_election()
-        data, addr = udp_socket.recvfrom(1024)  # Buffer size of 1024 bytes
-        message = data.decode().strip()
-        lcr.process_received_message(message)
-        print(f"Received message from neighbour: {message} from {addr}")
+
+        # data, addr = udp_socket.recvfrom(1024)  # Buffer size of 1024 bytes
+        # message = data.decode().strip()
+        # lcr_obj.process_received_message(message)
+        # print(f"Received message from neighbour: {message} from {addr}")
+
         # i think updating can be moved to a separate function, but members has to be created here
         # If "OK" message is received, send a unicast message
-        if message == "OK":
-            response_message = "ACKNOWLEDGED: Leader acknowledged your message."
-            udp_socket.sendto(response_message.encode(), (neighbour_ip, 11111))
-            print(f"Sent unicast message to {addr}: {response_message}")
+        # if message == "OK":
+        #     response_message = "ACKNOWLEDGED: Leader acknowledged your message."
+        #     udp_socket.sendto(response_message.encode(), (neighbour_ip, 11111))
+        #     print(f"Sent unicast message to {addr}: {response_message}")
 
 
 if __name__ == "__main__":

@@ -18,6 +18,8 @@ class lcr_election_handler:
         self.port = None
         self.uid = uuid.uuid1()  # Generating a Version 1 UUID
         self.leader_uid = None
+        self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.neighbour = None
 
     def form_members(self, group_view):
         self.members = [item[0] for item in group_view]
@@ -56,25 +58,30 @@ class lcr_election_handler:
         else:
             return None
 
-    def send_election_msg(self, participant_id, is_leader, neighbour_socket):
+    def send_election_msg(self, participant_id, is_leader):
         # pack into JSON and send
         # use socket function implemented by ramnath here
         # use logging module to log the messages
         # ensure only one way messaging is present
-        election_message = {"mid": participant_id, "is_leader ": is_leader}
+        election_message = {"mid": str(participant_id), "is_leader ": is_leader}
         # here we need the neighbouring server's socket, fetch the TCP socket of neighbour from the dictionary ip_vs_tcp_socket_mapping
         # sendMessagethroughTCPSocket(
         #     client_socket, json.dumps(election_message).encode()
         # )
-        neighbour_socket.sendto(
-            json.dumps(election_message).encode(), (self.get_neighbour(), 11111)
+        print("neighbour ip", self.get_neighbour())
+        self.udp_socket.sendto(
+            json.dumps(election_message).encode(), (self.neighbour, 11111)
         )
 
     def initiate_election(self):
         self.is_a_pariticipant = False
-        self.send_election_msg(self.participant_id, self.is_leader)
-        print("Election initiated by: " + str(self.participant_id))
-    
+
+        # self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        # self.udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+
+        self.send_election_msg(self.uid, self.is_leader)
+        print("Election initiated by: " + str(self.uid))
+
     def get_leader_status(self):
         return self.is_leader
 
