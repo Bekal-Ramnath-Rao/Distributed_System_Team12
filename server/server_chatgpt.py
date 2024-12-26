@@ -290,7 +290,7 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader):
         # if is_server_group_updated:
         #     pass
         # lcr_obj.get_neighbour()
-        if i_initiated_election and is_server_group_updated:
+        if is_server_group_updated:
             print("if is")
             lcr_obj.group_view = server_group
             lcr_obj.form_members(server_group)
@@ -300,19 +300,17 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader):
             print("formed ring")
             i_initiated_election = False
             is_server_group_updated = False
-            lcr_obj.initiate_election()
+            FIRST_TIME = False
+            if i_initiated_election  and not IS_LEADER:
+                lcr_obj.initiate_election()
+        else:
+            FIRST_TIME = True
 
-        # data, addr = udp_socket.recvfrom(1024)  # Buffer size of 1024 bytes
-        # message = data.decode().strip()
-        # lcr_obj.process_received_message(message)
-        # print(f"Received message from neighbour: {message} from {addr}")
-
-        # i think updating can be moved to a separate function, but members has to be created here
-        # If "OK" message is received, send a unicast message
-        # if message == "OK":
-        #     response_message = "ACKNOWLEDGED: Leader acknowledged your message."
-        #     udp_socket.sendto(response_message.encode(), (neighbour_ip, 11111))
-        #     print(f"Sent unicast message to {addr}: {response_message}")
+        if not FIRST_TIME:
+            data, addr = udp_socket.recvfrom(1024)  # Buffer size of 1024 bytes
+            message = data.decode().strip()
+            lcr_obj.process_received_message(message)
+            print(f"Received message from neighbour: {message} from {addr}")
 
 
 if __name__ == "__main__":
