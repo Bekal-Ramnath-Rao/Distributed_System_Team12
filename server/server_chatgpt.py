@@ -6,6 +6,7 @@ from managing_request import managingRequestfromClient
 from election_handler import lcr_election_handler
 import socket_handler
 import ast
+import pandas as pd
 
 LEADER_HOST = None  # The leader's host address (dynamically updated)
 LEADER_TCP_PORT = None  # The leader's TCP port (dynamically updated)
@@ -15,12 +16,11 @@ TIMEOUT = 5  # Timeout for leader election (in seconds)
 
 server_group = []  # List of (host, port) tuples for all servers in the group
 neighbor_sockets = []  # List of active neighbor connections
+clientobjectflag = False
 
-
-def handle_client(conn, client_address, sharehandler):
+def handle_client(conn, client_address, sharehandler, clientsharehandler, client_share):
     """Handle communication with a single client."""
     print(f"TCP connection established with {client_address}")
-    flag = False
     try:
         while True:
             client_message = conn.recv(1024).decode()
@@ -30,20 +30,13 @@ def handle_client(conn, client_address, sharehandler):
             else:
                 # Process the request as the leader
                 filtered_string = list(client_message.split())
-                if not flag:
-                    clientsharehandler = share_handler.clientshare_handler(
-                        0, 0, filtered_string[0]
-                    )
-                    client_share = managingRequestfromClient(
-                        sharehandler, clientsharehandler, filtered_string[0]
-                    )
-                    flag = True
+                    
 
                 if filtered_string[1] in ("b", "B"):
                     number_of_shares = int(filtered_string[3])
                     name_of_the_share = filtered_string[2]
                     transaction_result = client_share.executetheBuyrequest(
-                        number_of_shares, name_of_the_share
+                        number_of_shares, name_of_the_share, filtered_string[0]
                     )
                     server_response = (
                         "Transaction successful"
@@ -64,7 +57,7 @@ def handle_client(conn, client_address, sharehandler):
                     )
                     conn.send(server_response.encode())
                 elif filtered_string[1] in ("i", "I"):
-                    Data = client_share.executetheInquiryrequest()
+                    Data = client_share.executetheInquiryrequest(filtered_string[0])
                     Data = str(Data)
                     conn.send(Data.encode())
 
@@ -112,7 +105,7 @@ def neighbor_listener(tcp_port):
     print("Neighbor listener closed.")
 
 
-def tcp_server(tcp_port, sharehandler, is_leader):
+def tcp_server(tcp_port, sharehandler, is_leader, clientsharehandler, client_share):
     """Handle multiple clients via TCP."""
     if not is_leader:
         print("This server is a follower and will not handle client requests.")
@@ -127,7 +120,7 @@ def tcp_server(tcp_port, sharehandler, is_leader):
         while True:
             conn, client_address = tcp_socket.accept()
             client_thread = threading.Thread(
-                target=handle_client, args=(conn, client_address, sharehandler)
+                target=handle_client, args=(conn, client_address, sharehandler, clientsharehandler, client_share)
             )
             client_thread.start()
             print(f"Started thread for client {client_address}")
@@ -276,6 +269,12 @@ if __name__ == "__main__":
         MY_HOST = socket.gethostname()
         MY_IP = socket.gethostbyname(MY_HOST)
         server_group.append((MY_IP, SERVER_TCP_PORT))
+        clientobjectflag = False
+        clientsharehandler = share_handler.clientshare_handler(
+                        0, 0, 'LEADER')
+        client_share = managingRequestfromClient(
+                        sharehandler, clientsharehandler, 'LEADER')
+        clientobjectflag = True
     else:
         server_group = ast.literal_eval(server_group)
         election_thread = threading.Thread(
@@ -305,4 +304,4 @@ if __name__ == "__main__":
     # connect_to_neighbors(server_group, SERVER_TCP_PORT)
 
     # Start the TCP server (only if leader)
-    tcp_server(SERVER_TCP_PORT, sharehandler, IS_LEADER)
+    tcp_server(SERVER_TCP_PORT, sharehandler, IS_LEADER, clientsharehandler, client_share)

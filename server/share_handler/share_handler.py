@@ -58,6 +58,8 @@ class share_handler:
                 return False
 
     def inquiry(self, clientshare_handler, client_name):
+        if client_name not in clientshare_handler.client_data:
+            clientshare_handler.client_data[client_name] = {'A': 0, 'B': 0}
         return clientshare_handler.client_data[client_name]
 
 class clientshare_handler:
@@ -71,9 +73,13 @@ class clientshare_handler:
         if transaction == 'buy':
             if name_of_the_share == 'A':
                 self.number_of_shareA += number_of_shares
+                if client_name not in self.client_data:
+                    self.client_data[client_name] = {'A': 0, 'B': 0}
                 self.client_data[client_name][name_of_the_share] += number_of_shares
             elif name_of_the_share == 'B':
                 self.number_of_shareB += number_of_shares
+                if client_name not in self.client_data:
+                    self.client_data[client_name] = {'A': 0, 'B': 0}
                 self.client_data[client_name][name_of_the_share] += number_of_shares
         elif transaction == 'sell':
             if name_of_the_share == 'A':
