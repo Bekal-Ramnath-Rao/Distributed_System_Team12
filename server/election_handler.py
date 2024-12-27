@@ -5,7 +5,7 @@ import json
 
 class lcr_election_handler:
     # which port to pass here?
-    def __init__(self, ip, group_view, ip_vs_tcp_socket_mapping=None):
+    def __init__(self, ip, group_view, udp_socket_listener_for_election):
         # self.lcr = lcr
         self.group_view = group_view
         self.members = []  # group view
@@ -18,7 +18,7 @@ class lcr_election_handler:
         self.port = None
         self.uid = uuid.uuid1()  # Generating a Version 1 UUID
         self.leader_uid = None
-        self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.udp_socket = udp_socket_listener_for_election
         self.neighbour = None
 
     def form_members(self, group_view):
@@ -70,7 +70,7 @@ class lcr_election_handler:
         # )
         print("neighbour ip", self.get_neighbour())
         self.udp_socket.sendto(
-            json.dumps(election_message).encode(), (self.neighbour, 11111)
+            json.dumps(election_message).encode(), (self.neighbour, 12347)
         )
 
     def initiate_election(self):

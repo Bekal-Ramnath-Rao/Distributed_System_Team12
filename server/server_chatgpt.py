@@ -126,7 +126,7 @@ def tcp_server(tcp_port, sharehandler, is_leader):
         return
 
     tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    tcp_socket.bind(("0.0.0.0", tcp_port))  # Bind to all interfaces
+    tcp_socket.bind(("127.0.0.1", tcp_port))  # Bind to all interfaces
     tcp_socket.listen(5)  # Allow up to 5 clients to queue for connections
     print(f"Leader server is listening on TCP port {tcp_port}...")
 
@@ -161,7 +161,7 @@ def udp_server(udp_port, tcp_port, is_leader_flag):
         print(
             f"Follower server is waiting for broadcast messages on UDP port {udp_port}..."
         )
-    //time.sleep(2)
+    ##time.sleep(2)
     while True:
         try:
             print("before recv")
@@ -197,6 +197,7 @@ def udp_server(udp_port, tcp_port, is_leader_flag):
                         server_group_str.encode(), ("192.168.0.255", 12345)
                     )
                     print(f"Sent server group to ALL clients")
+                    is_server_group_updated = True
             else:
                 # Followers listen for leader acknowledgment or respond to client inquiries
                 if message.startswith("ACK_LEADER"):
@@ -210,8 +211,6 @@ def udp_server(udp_port, tcp_port, is_leader_flag):
                     is_server_group_updated = True
                     print("updated server group from leader is", server_group)
                     # update the server group here
-                else:
-                    print("no idea")
 
         except KeyboardInterrupt:
             print("Shutting down UDP server.")
@@ -280,12 +279,14 @@ def start_election(udp_port, broadcast_ip):
     # use this when we do not receive a response of server_group from leader
     # this happens when the leader is not present
     # udp_socket.settimeout(TIMEOUT)
+    udp_socket.close()
 
 
 def udp_server_managing_election(udp_socket, lcr_obj, is_leader):
     # server_group = []
     global is_server_group_updated, i_initiated_election, server_group
     print("inside election thread")
+    FIRST_TIME = True
     while True:
         # if is_server_group_updated:
         #     pass
@@ -296,21 +297,17 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader):
             lcr_obj.form_members(server_group)
             lcr_obj.form_ring()
             lcr_obj.neighbour = lcr_obj.get_neighbour()[0]
-            print("neigbour", lcr_obj.neighbour)
-            print("formed ring")
-            i_initiated_election = False
             is_server_group_updated = False
             FIRST_TIME = False
             if i_initiated_election  and not IS_LEADER:
                 lcr_obj.initiate_election()
-        else:
-            FIRST_TIME = True
-
-        if not FIRST_TIME:
-            data, addr = udp_socket.recvfrom(1024)  # Buffer size of 1024 bytes
-            message = data.decode().strip()
-            lcr_obj.process_received_message(message)
-            print(f"Received message from neighbour: {message} from {addr}")
+                i_initiated_election = False
+        #         #election_has_started = True
+        #     data, addr = udp_socket.recvfrom(1024)  # Buffer size of 1024 bytes
+        #     message = data.decode().strip()
+        #     lcr_obj.process_received_message(message)
+        #     print(f"Received message from neighbour: {message} from {addr}")
+        pass
 
 
 if __name__ == "__main__":
@@ -318,19 +315,6 @@ if __name__ == "__main__":
     BROADCAST_IP = "192.168.0.255"
     # Perform leader election
     IS_LEADER, server_group = leader_election(SERVER_UDP_PORT, BROADCAST_IP)
-
-    lcr_obj = lcr_election_handler(get_machines_ip(), [])
-    # create a UDP server just for handling election messages
-    udp_socket_listener_for_election = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    udp_socket_listener_for_election.setsockopt(
-        socket.SOL_SOCKET, socket.SO_REUSEADDR, 1
-    )
-    udp_socket_listener_for_election.bind(("", 11111))
-    udp_thread_for_election = threading.Thread(
-        target=udp_server_managing_election,
-        args=(udp_socket_listener_for_election, lcr_obj, IS_LEADER),
-    )
-    udp_thread_for_election.start()
 
     if IS_LEADER:
         sharehandler = share_handler.share_handler()
@@ -352,6 +336,19 @@ if __name__ == "__main__":
         # election_thread.start()
     #     lcr_election_handler()
     # Start the UDP server in a separate thread
+
+    # create a UDP server just for handling election messages
+    udp_socket_listener_for_election = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    udp_socket_listener_for_election.setsockopt(
+        socket.SOL_SOCKET, socket.SO_REUSEADDR, 1
+    )
+    udp_socket_listener_for_election.bind(("", 12347))
+    lcr_obj = lcr_election_handler(get_machines_ip(), [], udp_socket_listener_for_election)
+    udp_thread_for_election = threading.Thread(
+        target=udp_server_managing_election,
+        args=(udp_socket_listener_for_election, lcr_obj, IS_LEADER),
+    )
+    udp_thread_for_election.start()
     udp_thread = threading.Thread(
         target=udp_server, args=(SERVER_UDP_PORT, SERVER_TCP_PORT, IS_LEADER)
     )
