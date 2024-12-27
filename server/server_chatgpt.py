@@ -292,7 +292,6 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader):
         #     pass
         # lcr_obj.get_neighbour()
         if is_server_group_updated:
-            print("if is")
             lcr_obj.group_view = server_group
             lcr_obj.form_members(server_group)
             lcr_obj.form_ring()
@@ -320,7 +319,7 @@ if __name__ == "__main__":
         sharehandler = share_handler.share_handler()
         MY_HOST = socket.gethostname()
         MY_IP = socket.gethostbyname(MY_HOST)
-        server_group.append((MY_IP, SERVER_TCP_PORT))
+        server_group.append((get_machines_ip(), SERVER_TCP_PORT))
     else:
         server_group = ast.literal_eval(server_group)
         start_election(SERVER_UDP_PORT, BROADCAST_IP)
