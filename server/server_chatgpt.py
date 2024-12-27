@@ -303,7 +303,7 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader):
                 i_initiated_election = False
         #         #election_has_started = True
         if not FIRST_TIME:
-            data, addr = udp_socket.recvfrom(1024)  # Buffer size of 1024 bytes
+            data, addr = lcr_obj.udp_socket.recvfrom(4096)  # Buffer size of 1024 bytes
             # message = data.decode().strip()
             lcr_obj.process_received_message(data)
             print(f"Received message from neighbour: {data.decode().strip()} from {addr}")
