@@ -63,7 +63,7 @@ class lcr_election_handler:
         # use socket function implemented by ramnath here
         # use logging module to log the messages
         # ensure only one way messaging is present
-        election_message = {"mid": str(participant_id), "is_leader ": is_leader}
+        election_message = {"mid": str(participant_id), "is_leader": is_leader}
         # here we need the neighbouring server's socket, fetch the TCP socket of neighbour from the dictionary ip_vs_tcp_socket_mapping
         # sendMessagethroughTCPSocket(
         #     client_socket, json.dumps(election_message).encode()
@@ -98,20 +98,20 @@ class lcr_election_handler:
             print(self.leader_uid)
             self.send_election_msg(self.leader_uid, True)
 
-        if election_message["mid"] < self.uid and not self.is_a_pariticipant:
+        if election_message["mid"] < str(self.uid) and not self.is_a_pariticipant:
             # new_election_message = {"mid": self.uid, "is_leader ": False}
             self.is_a_pariticipant = True
             # send received election message to left neighbour
             self.send_election_msg(self.uid, False)
 
-        elif election_message["mid"] > self.uid:
+        elif election_message["mid"] > str(self.uid):
             # send received election message to left neighbour
             self.is_a_pariticipant = True
             self.send_election_msg(
                 election_message["mid"], election_message["is_leader"]
             )
 
-        elif election_message["mid"] == self.uid:
+        elif election_message["mid"] == str(self.uid):
             print("Election completed, leader is: " + str(self.uid))
             self.leader_uid = self.uid
             self.is_leader = True
