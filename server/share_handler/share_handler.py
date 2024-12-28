@@ -1,3 +1,5 @@
+import json
+
 class share:
     def __init__(self, name, number_of_shares):
         self.name = name
@@ -43,14 +45,14 @@ class share_handler:
     def sell(self, number_of_share, name_of_the_share, clientshare_handler, client_name):
         print('you are making a sell')
         if name_of_the_share == 'A':
-            if number_of_share <= clientshare_handler.client_data[client_name][name_of_the_share]:
+            if clientshare_handler.client_data[client_name][name_of_the_share] >= number_of_share:
                 self.share_A.addshares(number_of_share)
                 clientshare_handler.update('sell', name_of_the_share, number_of_share,client_name)
                 return True
             else:
                 return False
         if name_of_the_share == 'B':
-            if number_of_share <= clientshare_handler.client_data[client_name][name_of_the_share]:
+            if clientshare_handler.client_data[client_name][name_of_the_share] >= number_of_share >= number_of_share:
                 self.share_A.addshares(number_of_share)
                 clientshare_handler.update('sell', name_of_the_share, number_of_share, client_name)
                 return True
@@ -58,9 +60,9 @@ class share_handler:
                 return False
 
     def inquiry(self, clientshare_handler, client_name):
-        if client_name not in clientshare_handler.client_data:
-            clientshare_handler.client_data[client_name] = {'A': 0, 'B': 0}
         return clientshare_handler.client_data[client_name]
+
+
 
 class clientshare_handler:
     def __init__(self,number_of_shareA, number_of_shareB, name_of_the_client):
@@ -73,13 +75,9 @@ class clientshare_handler:
         if transaction == 'buy':
             if name_of_the_share == 'A':
                 self.number_of_shareA += number_of_shares
-                if client_name not in self.client_data:
-                    self.client_data[client_name] = {'A': 0, 'B': 0}
                 self.client_data[client_name][name_of_the_share] += number_of_shares
             elif name_of_the_share == 'B':
                 self.number_of_shareB += number_of_shares
-                if client_name not in self.client_data:
-                    self.client_data[client_name] = {'A': 0, 'B': 0}
                 self.client_data[client_name][name_of_the_share] += number_of_shares
         elif transaction == 'sell':
             if name_of_the_share == 'A':
@@ -89,3 +87,26 @@ class clientshare_handler:
                 self.number_of_shareB -= number_of_shares
                 self.client_data[client_name][name_of_the_share] -= number_of_shares
         return True
+
+    def to_dict(self):
+        """Convert the object to a dictionary for JSON serialization."""
+        return {
+            "number_of_shareA": self.number_of_shareA,
+            "number_of_shareB": self.number_of_shareB,
+            "client_data": self.client_data
+        }
+
+    @classmethod
+    def from_dict(cls, data):
+        """Create an object from a dictionary."""
+        instance = cls(data["number_of_shareA"], data["number_of_shareB"], list(data["client_data"].keys())[0])
+        instance.client_data = data["client_data"]
+        return instance
+
+
+# Custom JSON Encoder
+class ClientShareHandlerEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, clientshare_handler):
+            return obj.to_dict()  # Serialize using the to_dict method
+        return super().default(obj)
