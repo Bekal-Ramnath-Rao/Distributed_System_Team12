@@ -21,6 +21,7 @@ class lcr_election_handler:
         self.udp_socket = udp_socket_listener_for_election
         self.neighbour = None
         self.election_done = False
+        print('my id is : ', self.uid)
 
     def form_members(self, group_view):
         self.members = [item[0] for item in group_view]
