@@ -6,6 +6,7 @@ from managing_request import managingRequestfromClient
 from election_handler import lcr_election_handler
 import socket_handler
 import ast
+import pickle
 
 
 LEADER_HOST = None  # The leader's host address (dynamically updated)
@@ -20,7 +21,7 @@ server_group = []  # List of (host, port) tuples for all servers in the group
 neighbor_sockets = []  # List of active neighbor connections
 clientobjectflag = False
 
-def handle_client(conn, client_address, sharehandler, clientsharehandler, client_share):
+def handle_client(conn, client_address,client_share):
     """Handle communication with a single client."""
     print(f"TCP connection established with {client_address}")
     try:
@@ -71,7 +72,7 @@ def handle_client(conn, client_address, sharehandler, clientsharehandler, client
         print(f"Connection closed with {client_address}.")
 
 
-def tcp_server(tcp_port, sharehandler, is_leader, clientsharehandler, client_share):
+def tcp_server(tcp_port, is_leader, client_share):
     """Handle multiple clients via TCP."""
     if not is_leader:
         print("This server is a follower and will not handle client requests.")
@@ -86,7 +87,7 @@ def tcp_server(tcp_port, sharehandler, is_leader, clientsharehandler, client_sha
         while True:
             conn, client_address = tcp_socket.accept()
             client_thread = threading.Thread(
-                target=handle_client, args=(conn, client_address, sharehandler, clientsharehandler, client_share)
+                target=handle_client, args=(conn, client_address, client_share)
             )
             client_thread.start()
             print(f"Started thread for client {client_address}")
@@ -234,9 +235,9 @@ def start_election(udp_port, broadcast_ip):
     udp_socket.close()
 
 
-def udp_server_managing_election(udp_socket, lcr_obj, is_leader):
+def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehandler = None, client_share = None, sharehandler = None):
 
-    global is_server_group_updated, i_initiated_election, server_group
+    global is_server_group_updated, i_initiated_election, server_group, IS_LEADER
     print("inside election thread")
     FIRST_TIME = True
     while True:
@@ -260,10 +261,16 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader):
             lcr_obj.process_received_message(data)
         elif not FIRST_TIME and lcr_obj.election_done:
             if lcr_obj.get_leader_status():
-                print("I am the leader")
+                serialized_object = lcr_obj.udp_socket.recvfrom(4096)
+                deserialized_object = pickle.loads(serialized_object)
+                print("Received serialized object from leader")
+                IS_LEADER = True
                 break
             else:
-                print("I am not the leader")
+                if IS_LEADER:
+                    list_of_objects = pickle.dumps([clientsharehandler, client_share, sharehandler])
+                    lcr_obj.udp_socket.sendall(list_of_objects)
+                    print("Sent serialized object to follower")
             break
 
 
@@ -296,15 +303,19 @@ if __name__ == "__main__":
                         sharehandler, clientsharehandler, 'LEADER')
         clientobjectflag = True
         server_group.append((get_machines_ip(), SERVER_TCP_PORT))
+        udp_thread_for_election = threading.Thread(target=udp_server_managing_election,
+                                                   args=(udp_socket_listener_for_election, 
+                                                         lcr_obj, IS_LEADER, clientsharehandler, 
+                                                         client_share, sharehandler))
     else:
+        udp_thread_for_election = threading.Thread(target=udp_server_managing_election,
+                                                   args=(udp_socket_listener_for_election, 
+                                                         lcr_obj, IS_LEADER))
+        client_share = None
         server_group = ast.literal_eval(server_group)
         start_election(SERVER_UDP_PORT, BROADCAST_IP)
 
-    udp_thread_for_election = threading.Thread(
-        target=udp_server_managing_election,
-        args=(udp_socket_listener_for_election, lcr_obj, IS_LEADER),
-    )
     udp_thread_for_election.start()
 
     # Start the TCP server (only if leader)
-    tcp_server(SERVER_TCP_PORT, sharehandler, IS_LEADER, clientsharehandler, client_share)
+    tcp_server(SERVER_TCP_PORT, IS_LEADER, client_share)
