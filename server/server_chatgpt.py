@@ -50,7 +50,7 @@ def handle_client(conn, client_address, sharehandler, clientsharehandler, client
                     number_of_shares = int(filtered_string[3])
                     name_of_the_share = filtered_string[2]
                     transaction_result = client_share.executetheSellrequest(
-                        number_of_shares, name_of_the_share
+                        number_of_shares, name_of_the_share, filtered_string[0]
                     )
                     server_response = (
                         "Transaction successful"

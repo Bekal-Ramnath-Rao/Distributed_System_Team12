@@ -37,8 +37,8 @@ class managingRequestfromClient:
     def executetheBuyrequest(self, number_of_shares, name_of_the_share, name_of_the_client):
         return self.sharehandler.buy(number_of_shares, name_of_the_share, self.clientsharehandler, name_of_the_client)
 
-    def executetheSellrequest(self,number_of_shares, name_of_the_share):
-        return self.sharehandler.sell(number_of_shares, name_of_the_share, self.clientsharehandler, self.name_of_the_client)
+    def executetheSellrequest(self,number_of_shares, name_of_the_share, name_of_the_client):
+        return self.sharehandler.sell(number_of_shares, name_of_the_share, self.clientsharehandler, name_of_the_client)
     
     def executetheInquiryrequest(self, name_of_the_client):
         return self.sharehandler.inquiry(self.clientsharehandler, name_of_the_client)

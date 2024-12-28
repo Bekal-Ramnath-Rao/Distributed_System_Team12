@@ -43,14 +43,14 @@ class share_handler:
     def sell(self, number_of_share, name_of_the_share, clientshare_handler, client_name):
         print('you are making a sell')
         if name_of_the_share == 'A':
-            if clientshare_handler.client_data[client_name][name_of_the_share] >= number_of_share:
+            if number_of_share <= clientshare_handler.client_data[client_name][name_of_the_share]:
                 self.share_A.addshares(number_of_share)
                 clientshare_handler.update('sell', name_of_the_share, number_of_share,client_name)
                 return True
             else:
                 return False
         if name_of_the_share == 'B':
-            if clientshare_handler.client_data[client_name][name_of_the_share] >= number_of_share >= number_of_share:
+            if number_of_share <= clientshare_handler.client_data[client_name][name_of_the_share]:
                 self.share_A.addshares(number_of_share)
                 clientshare_handler.update('sell', name_of_the_share, number_of_share, client_name)
                 return True
