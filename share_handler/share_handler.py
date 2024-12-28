@@ -1,3 +1,5 @@
+import json
+
 class share:
     def __init__(self, name, number_of_shares):
         self.name = name
@@ -60,6 +62,8 @@ class share_handler:
     def inquiry(self, clientshare_handler, client_name):
         return clientshare_handler.client_data[client_name]
 
+
+
 class clientshare_handler:
     def __init__(self,number_of_shareA, number_of_shareB, name_of_the_client):
         self.number_of_shareA = number_of_shareA
@@ -83,3 +87,26 @@ class clientshare_handler:
                 self.number_of_shareB -= number_of_shares
                 self.client_data[client_name][name_of_the_share] -= number_of_shares
         return True
+
+    def to_dict(self):
+        """Convert the object to a dictionary for JSON serialization."""
+        return {
+            "number_of_shareA": self.number_of_shareA,
+            "number_of_shareB": self.number_of_shareB,
+            "client_data": self.client_data
+        }
+
+    @classmethod
+    def from_dict(cls, data):
+        """Create an object from a dictionary."""
+        instance = cls(data["number_of_shareA"], data["number_of_shareB"], list(data["client_data"].keys())[0])
+        instance.client_data = data["client_data"]
+        return instance
+
+
+# Custom JSON Encoder
+class ClientShareHandlerEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, clientshare_handler):
+            return obj.to_dict()  # Serialize using the to_dict method
+        return super().default(obj)

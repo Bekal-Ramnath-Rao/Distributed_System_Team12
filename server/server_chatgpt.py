@@ -6,6 +6,7 @@ from managing_request import managingRequestfromClient
 from election_handler import lcr_election_handler
 import socket_handler
 import ast
+import json
 import pickle
 
 
@@ -237,7 +238,7 @@ def start_election(udp_port, broadcast_ip):
 
 def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehandler = None, client_share = None, sharehandler = None):
 
-    global is_server_group_updated, i_initiated_election, server_group, IS_LEADER
+    global is_server_group_updated, i_initiated_election, server_group, IS_LEADER, LEADER_HOST, LEADER_TCP_PORT
     print("inside election thread")
     FIRST_TIME = True
     while True:
@@ -262,14 +263,14 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehand
         elif not FIRST_TIME and lcr_obj.election_done:
             if lcr_obj.get_leader_status():
                 serialized_object = lcr_obj.udp_socket.recvfrom(4096)
-                deserialized_object = pickle.loads(serialized_object)
+                deserialized_object = json.loads(serialized_object.decode())
                 print("Received serialized object from leader")
                 IS_LEADER = True
                 break
             else:
                 if IS_LEADER:
-                    list_of_objects = pickle.dumps([clientsharehandler, client_share, sharehandler])
-                    lcr_obj.udp_socket.sendto(list_of_objects,(LEADER_HOST, LEADER_TCP_PORT))
+                    list_of_objects = json.dumps(clientsharehandler, cls=share_handler.ClientShareHandlerEncoder)
+                    lcr_obj.udp_socket.sendto(list_of_objects.encode(),(LEADER_HOST, LEADER_TCP_PORT))
                     MY_HOST = socket.gethostname()
                     MY_IP = socket.gethostbyname(MY_HOST)
                     LEADER_HOST = MY_IP
