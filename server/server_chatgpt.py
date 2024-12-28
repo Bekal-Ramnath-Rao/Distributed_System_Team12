@@ -83,42 +83,6 @@ def handle_client(conn, client_address, sharehandler):
         print(f"Connection closed with {client_address}.")
 
 
-def connect_to_neighbors(server_group, tcp_port):
-    """Connect to neighbor servers in the group."""
-    global neighbor_sockets
-    for server in server_group:
-        host, port = server
-        try:
-            if port != tcp_port:  # Avoid connecting to self
-                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                sock.connect((host, port))
-                neighbor_sockets.append(sock)
-                print(f"Connected to neighbor {host}:{port}")
-        except Exception as e:
-            print(f"Failed to connect to neighbor {host}:{port}: {e}")
-
-
-def neighbor_listener(tcp_port):
-    """Start a TCP server to accept connections from neighbors."""
-    tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    # set or define the port number
-    tcp_socket.bind(("127.0.0.1", tcp_port))  # Bind to all interfaces
-    tcp_socket.listen(5)
-    print(f"Server listening for neighbor connections on TCP port {tcp_port}...")
-
-    while True:
-        try:
-            conn, addr = tcp_socket.accept()
-            neighbor_sockets.append(conn)
-            print(f"Connected to neighbor {addr}")
-            # Optionally, start a thread to handle communication with this neighbor
-        except KeyboardInterrupt:
-            break
-
-    tcp_socket.close()
-    print("Neighbor listener closed.")
-
-
 def tcp_server(tcp_port, sharehandler, is_leader):
     """Handle multiple clients via TCP."""
     if not is_leader:
@@ -126,7 +90,7 @@ def tcp_server(tcp_port, sharehandler, is_leader):
         return
 
     tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    tcp_socket.bind(("127.0.0.1", tcp_port))  # Bind to all interfaces
+    tcp_socket.bind(("0.0.0.0", tcp_port))  # Bind to all interfaces
     tcp_socket.listen(5)  # Allow up to 5 clients to queue for connections
     print(f"Leader server is listening on TCP port {tcp_port}...")
 
