@@ -266,10 +266,17 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader):
 
         if not FIRST_TIME and not lcr_obj.election_done:
             data, addr = lcr_obj.udp_socket.recvfrom(4096)  # Buffer size of 1024 bytes
-            lcr_obj.process_received_message(data)
             print(
                 f"Received message from neighbour: {data.decode().strip()} from {addr}"
             )
+            lcr_obj.process_received_message(data)
+        elif not FIRST_TIME and lcr_obj.election_done:
+            if lcr_obj.get_leader_status():
+                print("I am the leader")
+                break
+            else:
+                print("I am not the leader")
+            break
 
 
 if __name__ == "__main__":

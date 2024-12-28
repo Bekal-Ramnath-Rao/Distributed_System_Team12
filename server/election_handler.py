@@ -74,6 +74,7 @@ class lcr_election_handler:
         self.udp_socket.sendto(
             json.dumps(election_message).encode(), (self.neighbour, 12347)
         )
+        print('message sent -->',election_message)
 
     def initiate_election(self):
         self.is_a_pariticipant = False
