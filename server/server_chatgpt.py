@@ -269,7 +269,10 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehand
             else:
                 if IS_LEADER:
                     list_of_objects = pickle.dumps([clientsharehandler, client_share, sharehandler])
-                    lcr_obj.udp_socket.sendall(list_of_objects)
+                    lcr_obj.udp_socket.sendto(list_of_objects,(LEADER_HOST, LEADER_TCP_PORT))
+                    MY_HOST = socket.gethostname()
+                    MY_IP = socket.gethostbyname(MY_HOST)
+                    LEADER_HOST = MY_IP
                     print("Sent serialized object to follower")
             break
 
@@ -295,8 +298,8 @@ if __name__ == "__main__":
 
     if IS_LEADER:
         sharehandler = share_handler.share_handler()
-        MY_HOST = socket.gethostname()
-        MY_IP = socket.gethostbyname(MY_HOST)
+        #MY_HOST = socket.gethostname()
+        #MY_IP = socket.gethostbyname(MY_HOST)
         clientsharehandler = share_handler.clientshare_handler(
                         0, 0, 'LEADER')
         client_share = managingRequestfromClient(
