@@ -164,7 +164,6 @@ def udp_server(udp_port, tcp_port, is_leader_flag, lcr_obj=None):
     ##time.sleep(2)
     while True:
         try:
-            print("before recv")
             message, client_address = udp_socket.recvfrom(4096)
             message = message.decode()
             print(f"Received message '{message}' from {client_address}")
@@ -208,7 +207,6 @@ def udp_server(udp_port, tcp_port, is_leader_flag, lcr_obj=None):
                     print(f"Leader found at {LEADER_HOST}:{LEADER_TCP_PORT}.")
                     udp_socket.sendto("SEND_SERVER_GROUP".encode(), client_address)
                 elif message.startswith("UPDATED_SERVER_GROUP"):
-                    print("within updated server group")
                     server_group = ast.literal_eval(message[21:])
                     is_server_group_updated = True
                     print("updated server group from leader is", server_group)
