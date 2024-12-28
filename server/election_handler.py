@@ -20,6 +20,7 @@ class lcr_election_handler:
         self.leader_uid = None
         self.udp_socket = udp_socket_listener_for_election
         self.neighbour = None
+        self.election_done = False
 
     def form_members(self, group_view):
         self.members = [item[0] for item in group_view]
@@ -97,6 +98,7 @@ class lcr_election_handler:
             self.is_a_pariticipant = False
             print(self.leader_uid)
             self.send_election_msg(self.leader_uid, True)
+            self.election_done = True
 
         if election_message["mid"] < str(self.uid) and not self.is_a_pariticipant:
             # new_election_message = {"mid": self.uid, "is_leader ": False}
@@ -119,6 +121,7 @@ class lcr_election_handler:
             # send new election message to left neighbour
             self.is_a_pariticipant = False
             self.send_election_msg(self.uid, True)
+            self.election_done = True
 
 
 # if __name__ == "__main__":

@@ -283,14 +283,12 @@ def start_election(udp_port, broadcast_ip):
 
 
 def udp_server_managing_election(udp_socket, lcr_obj, is_leader):
-    # server_group = []
+
     global is_server_group_updated, i_initiated_election, server_group
     print("inside election thread")
     FIRST_TIME = True
     while True:
-        # if is_server_group_updated:
-        #     pass
-        # lcr_obj.get_neighbour()
+
         if is_server_group_updated:
             lcr_obj.group_view = server_group
             lcr_obj.form_members(server_group)
@@ -301,12 +299,12 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader):
             if i_initiated_election  and not IS_LEADER:
                 lcr_obj.initiate_election()
                 i_initiated_election = False
-        #         #election_has_started = True
-        if not FIRST_TIME:
-            data, addr = lcr_obj.udp_socket.recvfrom(4096)  # Buffer size of 1024 bytes
-            # message = data.decode().strip()
+
+        if not FIRST_TIME and not lcr_obj.election_done:
+            data, addr = lcr_obj.udp_socket.recvfrom(4096)  # Buffer size of 1024 bytes   
             lcr_obj.process_received_message(data)
             print(f"Received message from neighbour: {data.decode().strip()} from {addr}")
+
         pass
 
 
