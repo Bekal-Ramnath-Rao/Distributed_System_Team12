@@ -1,5 +1,6 @@
 import socket_handler
 from share_handler import share_handler
+import json
 
 class managingRequestfromClient:
 
@@ -49,3 +50,21 @@ class managingRequestfromClient:
     def sendAcknowledgement(self,client_socket, message):
         socket_handler.sendMessagethroughTCPSocket(client_socket, message)
 
+    def to_dict(self):
+        return {
+            "sharehandler": self.sharehandler,
+            "clientsharehandler": self.clientsharehandler,
+            "name_of_the_client": self.name_of_the_client
+        }
+    
+    @classmethod
+    def from_dict(cls, data):
+        instance = cls(data["sharehandler"], data["clientsharehandler"], data["name_of_the_client"])
+        return instance
+    
+# Custom JSON Encoder
+class managingRequestfromClientEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, managingRequestfromClient) or isinstance(obj, share_handler.share_handler) or isinstance(obj, share_handler.share) or isinstance(obj, share_handler.clientshare_handler):  
+            return obj.to_dict()  # Serialize using the to_dict method
+        return super().default(obj)

@@ -3,12 +3,13 @@ import threading
 import time
 from share_handler import share_handler
 from managing_request import managingRequestfromClient
+from managing_request import managingRequestfromClientEncoder
 from election_handler import lcr_election_handler
 import socket_handler
 import ast
 import json
 import pickle
-
+import ctypes
 
 LEADER_HOST = None  # The leader's host address (dynamically updated)
 LEADER_TCP_PORT = None  # The leader's TCP port (dynamically updated)
@@ -17,53 +18,117 @@ SERVER_TCP_PORT = 12346
 TIMEOUT = 3  # Timeout for leader election (in seconds)
 is_server_group_updated = False
 i_initiated_election = False
-
+IS_LEADER = False
 server_group = []  # List of (host, port) tuples for all servers in the group
 neighbor_sockets = []  # List of active neighbor connections
 clientobjectflag = False
+COLLECTION_THREAD_IS = []
 
-def handle_client(conn, client_address,client_share):
+import threading
+import time
+
+# Shared data structure to store thread information
+thread_info = []
+info_lock = threading.Lock()  # To ensure thread-safe access
+
+def collect_thread_info():
+    """Collect and print thread information."""
+    while True:
+        time.sleep(2)  # Periodically update thread info
+        with info_lock:
+            thread_info.clear()
+            for t in threading.enumerate():
+                thread_info.append((t.name, t.ident))
+        print("Thread info updated by collector thread.")
+
+def worker():
+    """A worker thread function."""
+    print(f"Worker thread {threading.current_thread().name} with ID {threading.get_ident()} is running.")
+    time.sleep(5)
+
+def requester():
+    """A thread that requests and prints thread information."""
+    while True:
+        time.sleep(3)
+        with info_lock:
+            print("\nRequester thread fetched thread info:")
+            for name, ident in thread_info:
+                print(f"Thread Name: {name}, Thread ID: {ident}")
+
+def stop_thread(thread):
+    tid = ctypes.c_long(thread.ident)
+    ctypes.pythonapi.PyThreadState_SetAsyncExc(tid, ctypes.py_object(SystemExit))
+
+def main():
+    # Create and start threads
+    threads = []
+    for i in range(3):
+        thread = threading.Thread(target=worker, name=f"Worker-{i}")
+        threads.append(thread)
+        thread.start()
+    
+
+    
+    # Wait for worker threads to finish
+    # for thread in threads:
+    #     thread.join()
+
+    # print("All worker threads have completed.")
+    while True:
+        pass
+
+
+def setleaderstatus(status):
+    global IS_LEADER
+    IS_LEADER = status
+
+def getleaderstatus():
+    global IS_LEADER
+    return IS_LEADER
+
+def handle_client(conn, client_address,client_share = None):
     """Handle communication with a single client."""
     print(f"TCP connection established with {client_address}")
     try:
         while True:
-            client_message = conn.recv(1024).decode()
-            if not client_message or client_message.lower() == "exit":
-                print(f"Client {client_address} requested to close the connection.")
-                break
-            else:
-                # Process the request as the leader
-                filtered_string = list(client_message.split())
-                    
+            if getleaderstatus():
+                client_message = conn.recv(1024).decode()
+                if not client_message or client_message.lower() == "exit":
+                    print(f"Client {client_address} requested to close the connection.")
+                    break
+                else:
+                    # Process the request as the leader
+                    filtered_string = list(client_message.split())
+                        
 
-                if filtered_string[1] in ("b", "B"):
-                    number_of_shares = int(filtered_string[3])
-                    name_of_the_share = filtered_string[2]
-                    transaction_result = client_share.executetheBuyrequest(
-                        number_of_shares, name_of_the_share, filtered_string[0]
-                    )
-                    server_response = (
-                        "Transaction successful"
-                        if transaction_result
-                        else "Transaction failed"
-                    )
-                    conn.send(server_response.encode())
-                elif filtered_string[1] in ("s", "S"):
-                    number_of_shares = int(filtered_string[3])
-                    name_of_the_share = filtered_string[2]
-                    transaction_result = client_share.executetheSellrequest(
-                        number_of_shares, name_of_the_share, filtered_string[0]
-                    )
-                    server_response = (
-                        "Transaction successful"
-                        if transaction_result
-                        else "Transaction failed"
-                    )
-                    conn.send(server_response.encode())
-                elif filtered_string[1] in ("i", "I"):
-                    Data = client_share.executetheInquiryrequest(filtered_string[0])
-                    Data = str(Data)
-                    conn.send(Data.encode())
+                    if filtered_string[1] in ("b", "B"):
+                        number_of_shares = int(filtered_string[3])
+                        name_of_the_share = filtered_string[2]
+                        transaction_result = client_share.executetheBuyrequest(
+                            number_of_shares, name_of_the_share, filtered_string[0]
+                        )
+                        server_response = (
+                            "Transaction successful"
+                            if transaction_result
+                            else "Transaction failed"
+                        )
+                        conn.send(server_response.encode())
+                    elif filtered_string[1] in ("s", "S"):
+                        number_of_shares = int(filtered_string[3])
+                        name_of_the_share = filtered_string[2]
+                        transaction_result = client_share.executetheSellrequest(
+                            number_of_shares, name_of_the_share, filtered_string[0]
+                        )
+                        server_response = (
+                            "Transaction successful"
+                            if transaction_result
+                            else "Transaction failed"
+                        )
+                        conn.send(server_response.encode())
+                    elif filtered_string[1] in ("i", "I"):
+                        Data = client_share.executetheInquiryrequest(filtered_string[0])
+                        Data = str(Data)
+                        conn.send(Data.encode())
 
             print(f"Received message from {client_address}: {client_message}")
 
@@ -86,12 +151,14 @@ def tcp_server(tcp_port, is_leader, client_share):
 
     try:
         while True:
-            conn, client_address = tcp_socket.accept()
-            client_thread = threading.Thread(
-                target=handle_client, args=(conn, client_address, client_share)
-            )
-            client_thread.start()
-            print(f"Started thread for client {client_address}")
+            if getleaderstatus():
+                conn, client_address = tcp_socket.accept()
+                client_thread = threading.Thread(
+                    target=handle_client, args=(conn, client_address, client_share)
+                )
+                client_thread.start()
+                print(f"Started thread for client {client_address}")
+
     except KeyboardInterrupt:
         print("Server is shutting down.")
     finally:
@@ -245,7 +312,7 @@ def server_reinitialise_UDPbuffer(udp_socket):
 
 def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehandler = None, client_share = None, sharehandler = None):
 
-    global is_server_group_updated, i_initiated_election, server_group, IS_LEADER, LEADER_HOST, LEADER_TCP_PORT
+    global is_server_group_updated, i_initiated_election, server_group, LEADER_HOST, LEADER_TCP_PORT
     print("inside election thread")
     FIRST_TIME = True
     while True:
@@ -257,7 +324,7 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehand
             lcr_obj.neighbour = lcr_obj.get_neighbour()[0]
             is_server_group_updated = False
             FIRST_TIME = False
-            if i_initiated_election and not IS_LEADER:
+            if i_initiated_election and not getleaderstatus():
                 lcr_obj.initiate_election()
                 i_initiated_election = False
 
@@ -269,20 +336,29 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehand
             lcr_obj.process_received_message(data)
         elif not FIRST_TIME and lcr_obj.election_done:
             if lcr_obj.get_leader_status():
-                lcr_obj.udp_socket = server_reinitialise_UDPbuffer(lcr_obj.udp_socket)
+                data = lcr_obj.udp_socket.recvfrom(4096)
                 serialized_object = lcr_obj.udp_socket.recvfrom(4096)
                 deserialized_object = json.loads(serialized_object.decode())
                 print("Received serialized object from leader")
-                IS_LEADER = True
+                setleaderstatus(True)
                 break
             else:
-                if IS_LEADER:
-                    list_of_objects = json.dumps(clientsharehandler, cls=share_handler.ClientShareHandlerEncoder)
-                    udp_socket.sendto(list_of_objects.encode(),('192.168.0.100', 12347))
+                if getleaderstatus():
+                    list_of_objects = []
+                    list_of_objects.append(json.dumps(clientsharehandler, cls=share_handler.ClientShareHandlerEncoder))
+                    list_of_objects.append(json.dumps(sharehandler, cls=share_handler.shareHandlerEncoder))
+                    list_of_objects.append(json.dumps(client_share, cls=managingRequestfromClientEncoder))
+                    udp_socket.sendto(json.dumps(list_of_objects).encode(),('192.168.0.100', 12347))
                     MY_HOST = socket.gethostname()
                     MY_IP = socket.gethostbyname(MY_HOST)
                     LEADER_HOST = MY_IP
+                    setleaderstatus(False)
+                    with info_lock:
+                        print("\nRequester thread fetched thread info:")
+                    for name, ident in thread_info:
+                        print(f"Thread Name: {name}, Thread ID: {ident}")
                     print("Sent serialized object to follower")
+                    stop_thread()
             break
 
 
@@ -290,7 +366,17 @@ if __name__ == "__main__":
     sharehandler = None
     BROADCAST_IP = "192.168.0.255"
     # Perform leader election
-    IS_LEADER, server_group = leader_election(SERVER_UDP_PORT, BROADCAST_IP)
+    is_leader, server_group = leader_election(SERVER_UDP_PORT, BROADCAST_IP)
+    setleaderstatus(is_leader)
+    
+    # Start a thread to collect thread information
+    collector_thread = threading.Thread(target=collect_thread_info, daemon=True)
+    collector_thread.start()
+    
+    # Start a thread to request thread information
+    requester_thread = threading.Thread(target=requester, daemon=True)
+    requester_thread.start()
+
     udp_socket_listener_for_election = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     udp_socket_listener_for_election.setsockopt(
         socket.SOL_SOCKET, socket.SO_REUSEADDR, 1
@@ -301,12 +387,12 @@ if __name__ == "__main__":
         get_machines_ip(), [], udp_socket_listener_for_election
     )
     udp_thread = threading.Thread(
-        target=udp_server, args=(SERVER_UDP_PORT, SERVER_TCP_PORT, IS_LEADER, lcr_obj)
+        target=udp_server, args=(SERVER_UDP_PORT, SERVER_TCP_PORT, getleaderstatus(), lcr_obj)
     )
-    udp_thread.start()
     time.sleep(1)
+    udp_thread.start()
 
-    if IS_LEADER:
+    if getleaderstatus():
         sharehandler = share_handler.share_handler()
         #MY_HOST = socket.gethostname()
         #MY_IP = socket.gethostbyname(MY_HOST)
@@ -318,17 +404,16 @@ if __name__ == "__main__":
         server_group.append((get_machines_ip(), SERVER_TCP_PORT))
         udp_thread_for_election = threading.Thread(target=udp_server_managing_election,
                                                    args=(udp_socket_listener_for_election, 
-                                                         lcr_obj, IS_LEADER, clientsharehandler, 
-                                                         client_share, sharehandler))
+                                                         lcr_obj, getleaderstatus(), clientsharehandler, 
+                                                         client_share, share_handler))
     else:
         udp_thread_for_election = threading.Thread(target=udp_server_managing_election,
                                                    args=(udp_socket_listener_for_election, 
-                                                         lcr_obj, IS_LEADER))
+                                                         lcr_obj, getleaderstatus()))
         client_share = None
         server_group = ast.literal_eval(server_group)
         start_election(SERVER_UDP_PORT, BROADCAST_IP)
 
     udp_thread_for_election.start()
-
     # Start the TCP server (only if leader)
-    tcp_server(SERVER_TCP_PORT, IS_LEADER, client_share)
+    tcp_server(SERVER_TCP_PORT, getleaderstatus(), client_share)
