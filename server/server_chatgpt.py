@@ -241,6 +241,7 @@ def server_reinitialise_UDPbuffer(udp_socket):
     udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     udp_socket.bind(("", 12347))  # Listen on all interfaces
+    return udp_socket
 
 def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehandler = None, client_share = None, sharehandler = None):
 
@@ -268,7 +269,7 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehand
             lcr_obj.process_received_message(data)
         elif not FIRST_TIME and lcr_obj.election_done:
             if lcr_obj.get_leader_status():
-                server_reinitialise_UDPbuffer(lcr_obj.udp_socket)
+                lcr_obj.udp_socket = server_reinitialise_UDPbuffer(lcr_obj.udp_socket)
                 serialized_object = lcr_obj.udp_socket.recvfrom(4096)
                 deserialized_object = json.loads(serialized_object.decode())
                 print("Received serialized object from leader")
