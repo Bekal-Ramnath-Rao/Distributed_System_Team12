@@ -39,9 +39,13 @@ class shareEncoder(json.JSONEncoder):
     
 class share_handler:
 
-    def __init__(self):
-        self.share_A = share('A', 5000)
-        self.share_B = share('B', 5000)
+    def __init__(self, share_A=None, share_B=None):
+        if share_A is not None or share_B is not None:
+            self.share_A = share.from_dict(share_A)
+            self.share_B = share.from_dict(share_B)
+        else:
+            self.share_A = share('A', 5000)
+            self.share_B = share('B', 5000)
 
     def buy(self, number_of_share, name_of_the_share, clientshare_handler, client_name):
         print('you are making a buy')

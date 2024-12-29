@@ -40,6 +40,14 @@ def getclientshareobject():
     global client_share
     return client_share
 
+def setclientsharehandlerobject(clientsharehandler_object):
+    global clientsharehandler
+    clientsharehandler = clientsharehandler_object
+
+def getclientsharehandlerobject():
+    global clientsharehandler
+    return clientsharehandler
+
 def setleaderstatus(status):
     global IS_LEADER
     IS_LEADER = status
@@ -114,7 +122,7 @@ def tcp_server(tcp_port, is_leader, client_share):
                 if getclientshareobject() is not None:
                     conn, client_address = tcp_socket.accept()
                     client_thread = threading.Thread(
-                        target=handle_client, args=(conn, client_address, client_share)
+                        target=handle_client, args=(conn, client_address, getclientshareobject())
                     )
                     client_thread.start()
                     print(f"Started thread for client {client_address}")
@@ -303,16 +311,19 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehand
                 list_of_dicts = [json.loads(item) for item in deserialized_object_list]
                 print("Received serialized object list from leader", list_of_dicts)
                 clientsharehandler = share_handler.clientshare_handler.from_dict(list_of_dicts[0])
-                client_share = managingRequestfromClient.from_dict(list_of_dicts[1])
+                sharehandler = share_handler.share_handler.from_dict(list_of_dicts[1])
+                # client_share = managingRequestfromClient.from_dict(list_of_dicts[2])
+                client_share = managingRequestfromClient(sharehandler, clientsharehandler, 'FOLLOWER')
                 setleaderstatus(True)
-                setclientshareobject(client_share)                     
+                setclientshareobject(client_share) 
+                setclientsharehandlerobject(clientsharehandler)                    
 
 
             else:
                 if getleaderstatus():
                     list_of_objects = []
                     list_of_objects.append(json.dumps(clientsharehandler, cls=share_handler.ClientShareHandlerEncoder))
-                    #list_of_objects.append(json.dumps(sharehandler, cls=share_handler.shareHandlerEncoder))
+                    list_of_objects.append(json.dumps(sharehandler, cls=share_handler.shareHandlerEncoder))
                     list_of_objects.append(json.dumps(client_share, cls=managingRequestfromClientEncoder))
                     udp_socket.sendto(json.dumps(list_of_objects).encode(),('192.168.0.100', 12347))
                     MY_HOST = socket.gethostname()
@@ -363,7 +374,7 @@ if __name__ == "__main__":
         udp_thread_for_election = threading.Thread(target=udp_server_managing_election,
                                                    args=(udp_socket_listener_for_election, 
                                                          lcr_obj, getleaderstatus(), clientsharehandler, 
-                                                         client_share, share_handler))
+                                                         client_share, sharehandler))
     else:
         udp_thread_for_election = threading.Thread(target=udp_server_managing_election,
                                                    args=(udp_socket_listener_for_election, 
