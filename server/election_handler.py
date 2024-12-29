@@ -108,7 +108,7 @@ class lcr_election_handler:
             # send received election message to left neighbour
             self.send_election_msg(self.uid, False)
 
-        elif election_message["mid"] > str(self.uid):
+        elif election_message["mid"] > str(self.uid) and not self.election_done:
             # send received election message to left neighbour
             self.is_a_pariticipant = True
             self.send_election_msg(

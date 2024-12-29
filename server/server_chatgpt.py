@@ -236,6 +236,12 @@ def start_election(udp_port, broadcast_ip):
     udp_socket.close()
 
 
+def server_reinitialise_UDPbuffer(udp_socket):
+    udp_socket.close()
+    udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    udp_socket.bind(("", 12347))  # Listen on all interfaces
+
 def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehandler = None, client_share = None, sharehandler = None):
 
     global is_server_group_updated, i_initiated_election, server_group, IS_LEADER, LEADER_HOST, LEADER_TCP_PORT
@@ -262,6 +268,7 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehand
             lcr_obj.process_received_message(data)
         elif not FIRST_TIME and lcr_obj.election_done:
             if lcr_obj.get_leader_status():
+                server_reinitialise_UDPbuffer(lcr_obj.udp_socket)
                 serialized_object = lcr_obj.udp_socket.recvfrom(4096)
                 deserialized_object = json.loads(serialized_object.decode())
                 print("Received serialized object from leader")
@@ -270,7 +277,7 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehand
             else:
                 if IS_LEADER:
                     list_of_objects = json.dumps(clientsharehandler, cls=share_handler.ClientShareHandlerEncoder)
-                    lcr_obj.udp_socket.sendto(list_of_objects.encode(),(LEADER_HOST, LEADER_TCP_PORT))
+                    udp_socket.sendto(list_of_objects.encode(),('192.168.0.100', 12347))
                     MY_HOST = socket.gethostname()
                     MY_IP = socket.gethostbyname(MY_HOST)
                     LEADER_HOST = MY_IP
@@ -288,6 +295,7 @@ if __name__ == "__main__":
         socket.SOL_SOCKET, socket.SO_REUSEADDR, 1
     )
     udp_socket_listener_for_election.bind(("", 12347))
+    
     lcr_obj = lcr_election_handler(
         get_machines_ip(), [], udp_socket_listener_for_election
     )
