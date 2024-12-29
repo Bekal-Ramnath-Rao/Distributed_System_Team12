@@ -297,11 +297,17 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehand
         elif not FIRST_TIME and lcr_obj.election_done:
             if lcr_obj.get_leader_status():
                 data = lcr_obj.udp_socket.recvfrom(4096)
-                serialized_object = lcr_obj.udp_socket.recvfrom(4096)
-                deserialized_object = json.loads(serialized_object.decode())
-                print("Received serialized object from leader")
+                received_data = lcr_obj.udp_socket.recvfrom(4096)
+                deserialized_object = received_data[0].decode()
+                deserialized_object_list  = ast.literal_eval(deserialized_object)
+                list_of_dicts = [json.loads(item) for item in deserialized_object_list]
+                print("Received serialized object list from leader", list_of_dicts)
+                clientsharehandler = share_handler.clientshare_handler.from_dict(list_of_dicts[0])
+                client_share = managingRequestfromClient.from_dict(list_of_dicts[1])
                 setleaderstatus(True)
-                break
+                setclientshareobject(client_share)                     
+
+
             else:
                 if getleaderstatus():
                     list_of_objects = []
