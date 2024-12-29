@@ -30,53 +30,15 @@ import time
 # Shared data structure to store thread information
 thread_info = []
 info_lock = threading.Lock()  # To ensure thread-safe access
+client_share = None
 
-def collect_thread_info():
-    """Collect and print thread information."""
-    while True:
-        time.sleep(2)  # Periodically update thread info
-        with info_lock:
-            thread_info.clear()
-            for t in threading.enumerate():
-                thread_info.append((t.name, t.ident))
-        print("Thread info updated by collector thread.")
+def setclientshareobject(client_share_object):
+    global client_share
+    client_share = client_share_object
 
-def worker():
-    """A worker thread function."""
-    print(f"Worker thread {threading.current_thread().name} with ID {threading.get_ident()} is running.")
-    time.sleep(5)
-
-def requester():
-    """A thread that requests and prints thread information."""
-    while True:
-        time.sleep(3)
-        with info_lock:
-            print("\nRequester thread fetched thread info:")
-            for name, ident in thread_info:
-                print(f"Thread Name: {name}, Thread ID: {ident}")
-
-def stop_thread(thread):
-    tid = ctypes.c_long(thread.ident)
-    ctypes.pythonapi.PyThreadState_SetAsyncExc(tid, ctypes.py_object(SystemExit))
-
-def main():
-    # Create and start threads
-    threads = []
-    for i in range(3):
-        thread = threading.Thread(target=worker, name=f"Worker-{i}")
-        threads.append(thread)
-        thread.start()
-    
-
-    
-    # Wait for worker threads to finish
-    # for thread in threads:
-    #     thread.join()
-
-    # print("All worker threads have completed.")
-    while True:
-        pass
-
+def getclientshareobject():
+    global client_share
+    return client_share
 
 def setleaderstatus(status):
     global IS_LEADER
@@ -140,9 +102,6 @@ def handle_client(conn, client_address,client_share = None):
 
 def tcp_server(tcp_port, is_leader, client_share):
     """Handle multiple clients via TCP."""
-    if not is_leader:
-        print("This server is a follower and will not handle client requests.")
-        return
 
     tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     tcp_socket.bind(("0.0.0.0", tcp_port))  # Bind to all interfaces
@@ -152,16 +111,17 @@ def tcp_server(tcp_port, is_leader, client_share):
     try:
         while True:
             if getleaderstatus():
-                conn, client_address = tcp_socket.accept()
-                client_thread = threading.Thread(
-                    target=handle_client, args=(conn, client_address, client_share)
-                )
-                client_thread.start()
-                print(f"Started thread for client {client_address}")
+                if getclientshareobject() is not None:
+                    conn, client_address = tcp_socket.accept()
+                    client_thread = threading.Thread(
+                        target=handle_client, args=(conn, client_address, client_share)
+                    )
+                    client_thread.start()
+                    print(f"Started thread for client {client_address}")
+
 
     except KeyboardInterrupt:
         print("Server is shutting down.")
-    finally:
         tcp_socket.close()
         print("TCP server closed.")
 
@@ -174,7 +134,7 @@ def udp_server(udp_port, tcp_port, is_leader_flag, lcr_obj=None):
     udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     udp_socket.bind(("", udp_port))  # Listen on all interfaces
 
-    if is_leader_flag:
+    if getleaderstatus():
         print(
             f"Leader server is waiting for broadcast messages on UDP port {udp_port}..."
         )
@@ -189,7 +149,7 @@ def udp_server(udp_port, tcp_port, is_leader_flag, lcr_obj=None):
             message = message.decode()
             print(f"Received message '{message}' from {client_address}")
 
-            if is_leader_flag:
+            if getleaderstatus():
                 # Leader responds to server broadcast messages
                 if message == "NEW_SERVER":
                     # server_group.append(client_address)
@@ -346,7 +306,7 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehand
                 if getleaderstatus():
                     list_of_objects = []
                     list_of_objects.append(json.dumps(clientsharehandler, cls=share_handler.ClientShareHandlerEncoder))
-                    list_of_objects.append(json.dumps(sharehandler, cls=share_handler.shareHandlerEncoder))
+                    #list_of_objects.append(json.dumps(sharehandler, cls=share_handler.shareHandlerEncoder))
                     list_of_objects.append(json.dumps(client_share, cls=managingRequestfromClientEncoder))
                     udp_socket.sendto(json.dumps(list_of_objects).encode(),('192.168.0.100', 12347))
                     MY_HOST = socket.gethostname()
@@ -358,7 +318,6 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehand
                     for name, ident in thread_info:
                         print(f"Thread Name: {name}, Thread ID: {ident}")
                     print("Sent serialized object to follower")
-                    stop_thread()
             break
 
 
@@ -400,12 +359,13 @@ if __name__ == "__main__":
                         0, 0, 'LEADER')
         client_share = managingRequestfromClient(
                         sharehandler, clientsharehandler, 'LEADER')
+        setclientshareobject(client_share)
         clientobjectflag = True
         server_group.append((get_machines_ip(), SERVER_TCP_PORT))
         udp_thread_for_election = threading.Thread(target=udp_server_managing_election,
                                                    args=(udp_socket_listener_for_election, 
                                                          lcr_obj, getleaderstatus(), clientsharehandler, 
-                                                         client_share, share_handler))
+                                                         client_share, share_handler, udp_thread))
     else:
         udp_thread_for_election = threading.Thread(target=udp_server_managing_election,
                                                    args=(udp_socket_listener_for_election, 
