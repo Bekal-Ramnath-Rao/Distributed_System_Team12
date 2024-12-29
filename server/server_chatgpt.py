@@ -333,14 +333,6 @@ if __name__ == "__main__":
     # Perform leader election
     is_leader, server_group = leader_election(SERVER_UDP_PORT, BROADCAST_IP)
     setleaderstatus(is_leader)
-    
-    # Start a thread to collect thread information
-    collector_thread = threading.Thread(target=collect_thread_info, daemon=True)
-    collector_thread.start()
-    
-    # Start a thread to request thread information
-    requester_thread = threading.Thread(target=requester, daemon=True)
-    requester_thread.start()
 
     udp_socket_listener_for_election = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     udp_socket_listener_for_election.setsockopt(
@@ -371,7 +363,7 @@ if __name__ == "__main__":
         udp_thread_for_election = threading.Thread(target=udp_server_managing_election,
                                                    args=(udp_socket_listener_for_election, 
                                                          lcr_obj, getleaderstatus(), clientsharehandler, 
-                                                         client_share, share_handler, udp_thread))
+                                                         client_share, share_handler))
     else:
         udp_thread_for_election = threading.Thread(target=udp_server_managing_election,
                                                    args=(udp_socket_listener_for_election, 
