@@ -297,11 +297,25 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehand
                 i_initiated_election = False
 
         if not FIRST_TIME and not lcr_obj.election_done:
-            data, addr = lcr_obj.udp_socket.recvfrom(4096)  # Buffer size of 1024 bytes
-            print(
-                f"Received message from neighbour: {data.decode().strip()} from {addr}"
-            )
-            lcr_obj.process_received_message(data)
+            try:
+                while True:
+                    data, addr = lcr_obj.udp_socket.recvfrom(1024)  # Buffer size of 1024 bytes
+                    print(f"Received message: {data.decode()} from {addr}")
+                    latest_message = data
+            except BlockingIOError:
+            # This exception occurs when the buffer is empty
+                if latest_message:
+                    print("\nBuffer is empty. Processing the latest message:")
+                    # print(f"Latest Message: {latest_message}")
+                    # Process the latest message here
+                    lcr_obj.process_received_message(latest_message)
+                    latest_message = None  # Reset after processing
+
+            # data, addr = lcr_obj.udp_socket.recvfrom(4096)  # Buffer size of 1024 bytes
+            # print(
+                # f"Received message from neighbour: {data.decode().strip()} from {addr}"
+            # )
+            # lcr_obj.process_received_message(data)
 
         elif not FIRST_TIME and lcr_obj.election_done:
             if lcr_obj.get_leader_status():
@@ -353,6 +367,7 @@ if __name__ == "__main__":
         socket.SOL_SOCKET, socket.SO_REUSEADDR, 1
     )
     udp_socket_listener_for_election.bind(("", 12347))
+    udp_socket_listener_for_election.setblocking(False)
     
     lcr_obj = lcr_election_handler(
         get_machines_ip(), [], udp_socket_listener_for_election
