@@ -98,6 +98,8 @@ class lcr_election_handler:
             self.leader_uid = election_message["mid"]
             # forward received election message to left neighbour
             self.is_a_pariticipant = False
+            if (self.uid != self.leader_uid):
+                self.is_leader = False
             print("Election completed, leader is: " + str(self.leader_uid))
             self.send_election_msg(self.leader_uid, True)
             self.election_done = True

@@ -302,22 +302,27 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehand
                 f"Received message from neighbour: {data.decode().strip()} from {addr}"
             )
             lcr_obj.process_received_message(data)
+
         elif not FIRST_TIME and lcr_obj.election_done:
             if lcr_obj.get_leader_status():
-                data = lcr_obj.udp_socket.recvfrom(4096)
-                received_data = lcr_obj.udp_socket.recvfrom(4096)
-                deserialized_object = received_data[0].decode()
-                deserialized_object_list  = ast.literal_eval(deserialized_object)
-                list_of_dicts = [json.loads(item) for item in deserialized_object_list]
-                print("Received serialized object list from leader", list_of_dicts)
-                clientsharehandler = share_handler.clientshare_handler.from_dict(list_of_dicts[0])
-                sharehandler = share_handler.share_handler.from_dict(list_of_dicts[1])
-                # client_share = managingRequestfromClient.from_dict(list_of_dicts[2])
-                client_share = managingRequestfromClient(sharehandler, clientsharehandler, 'FOLLOWER')
-                setleaderstatus(True)
-                setclientshareobject(client_share) 
-                setclientsharehandlerobject(clientsharehandler)                    
-
+                if not getleaderstatus():
+                    data = lcr_obj.udp_socket.recvfrom(4096)
+                    received_data = lcr_obj.udp_socket.recvfrom(4096)
+                    deserialized_object = received_data[0].decode()
+                    deserialized_object_list  = ast.literal_eval(deserialized_object)
+                    list_of_dicts = [json.loads(item) for item in deserialized_object_list]
+                    print("Received serialized object list from leader", list_of_dicts)
+                    clientsharehandler = share_handler.clientshare_handler.from_dict(list_of_dicts[0])
+                    sharehandler = share_handler.share_handler.from_dict(list_of_dicts[1])
+                    # client_share = managingRequestfromClient.from_dict(list_of_dicts[2])
+                    client_share = managingRequestfromClient(sharehandler, clientsharehandler, 'FOLLOWER')
+                    setleaderstatus(True)
+                    setclientshareobject(client_share) 
+                    setclientsharehandlerobject(clientsharehandler)                    
+                    FIRST_TIME = True
+                    lcr_obj.election_done = False
+                    lcr_obj.is_leader=True
+                    FIRST_TIME = True
 
             else:
                 if getleaderstatus():
@@ -325,17 +330,15 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehand
                     list_of_objects.append(json.dumps(clientsharehandler, cls=share_handler.ClientShareHandlerEncoder))
                     list_of_objects.append(json.dumps(sharehandler, cls=share_handler.shareHandlerEncoder))
                     list_of_objects.append(json.dumps(client_share, cls=managingRequestfromClientEncoder))
-                    udp_socket.sendto(json.dumps(list_of_objects).encode(),('192.168.0.100', 12347))
+                    udp_socket.sendto(json.dumps(list_of_objects).encode(),('192.168.0.101', 12347))
                     MY_HOST = socket.gethostname()
                     MY_IP = socket.gethostbyname(MY_HOST)
                     LEADER_HOST = MY_IP
                     setleaderstatus(False)
-                    with info_lock:
-                        print("\nRequester thread fetched thread info:")
-                    for name, ident in thread_info:
-                        print(f"Thread Name: {name}, Thread ID: {ident}")
-                    print("Sent serialized object to follower")
-            break
+                    lcr_obj.election_done = False
+                    lcr_obj.is_leader=False
+                    FIRST_TIME = True
+            
 
 
 if __name__ == "__main__":
