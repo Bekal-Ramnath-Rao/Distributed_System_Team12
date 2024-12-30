@@ -101,7 +101,8 @@ class lcr_election_handler:
             if (self.uid != self.leader_uid):
                 self.is_leader = False
             print("Election completed, leader is: " + str(self.leader_uid))
-            self.send_election_msg(self.leader_uid, True)
+            if len(self.members) > 2:
+                self.send_election_msg(self.leader_uid, True)
             self.election_done = True
 
         if election_message["mid"] < str(self.uid) and not self.is_a_pariticipant:

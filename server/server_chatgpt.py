@@ -334,7 +334,7 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehand
                             print("\nBuffer is empty. Processing the latest message:")
                             # print(f"Latest Message: {latest_message}")
                             # Process the latest message here
-                            deserialized_object = latest_message[0].decode()
+                            deserialized_object = latest_message.decode()
                             deserialized_object_list  = ast.literal_eval(deserialized_object)
                             list_of_dicts = [json.loads(item) for item in deserialized_object_list]
                             print("Received serialized object list from leader", list_of_dicts)
