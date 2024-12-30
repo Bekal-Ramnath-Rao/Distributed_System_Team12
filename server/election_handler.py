@@ -26,8 +26,8 @@ class lcr_election_handler:
         print('my id is : ', self.uid)
 
     def create_IP_UID_mapping(self, client_address, uid):
-        self.IP_UID_mapping[client_address] = uid
-        self.UID_IP_mapping[uid] = client_address
+        self.IP_UID_mapping[client_address] = str(uid)
+        self.UID_IP_mapping[str(uid)] = client_address
 
     def form_members(self, group_view):
         self.members = [item[0] for item in group_view]

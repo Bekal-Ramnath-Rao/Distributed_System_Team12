@@ -213,8 +213,7 @@ def udp_server(udp_port, tcp_port, is_leader_flag, lcr_obj=None):
 
 def update_ip_list(ip_list, new_tuple, IP_UID_mapping=None):
     # Create a dictionary to store the latest tuple for each unique IP address
-    ip_dict = {ip: (ip, port, IP_UID_mapping[ip]) for ip, port in ip_list}
-
+    ip_dict = {ip: (ip, port, IP_UID_mapping[ip]) for ip, port, _ in ip_list}
     # Update the dictionary with the new tuple
     ip_dict[new_tuple[0]] = new_tuple
 
@@ -403,7 +402,8 @@ if __name__ == "__main__":
                         sharehandler, clientsharehandler, 'LEADER')
         setclientshareobject(client_share)
         clientobjectflag = True
-        server_group.append((get_machines_ip(), SERVER_TCP_PORT))
+        server_group.append((get_machines_ip(), SERVER_TCP_PORT, str(lcr_obj.uid)))
+        lcr_obj.create_IP_UID_mapping(get_machines_ip(), str(lcr_obj.uid))
         udp_thread_for_election = threading.Thread(target=udp_server_managing_election,
                                                    args=(udp_socket_listener_for_election, 
                                                          lcr_obj, getleaderstatus(), clientsharehandler, 
