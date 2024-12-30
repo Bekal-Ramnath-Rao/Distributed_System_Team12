@@ -213,10 +213,9 @@ def udp_server(udp_port, tcp_port, is_leader_flag, lcr_obj=None):
 
 def update_ip_list(ip_list, new_tuple, IP_UID_mapping=None):
     # Create a dictionary to store the latest tuple for each unique IP address
-    ip_dict = {ip: (ip, port, IP_UID_mapping[ip]) for ip, port, _ in ip_list}
+    ip_dict = {ip: (ip, port, IP_UID_mapping[ip]) for ip, port, uid in ip_list}
     # Update the dictionary with the new tuple
-    ip_dict[new_tuple[0]] = new_tuple
-
+    ip_dict[new_tuple[0]] = new_tuple[0], new_tuple[1], IP_UID_mapping[new_tuple[0]]
     # Convert the dictionary values back to a list
     return list(ip_dict.values())
 
