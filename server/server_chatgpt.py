@@ -159,9 +159,11 @@ def udp_server(udp_port, tcp_port, is_leader_flag, lcr_obj=None):
 
             if getleaderstatus():
                 # Leader responds to server broadcast messages
-                if message == "NEW_SERVER":
+                if message.startswith("NEW_SERVER"):
                     # server_group.append(client_address)
-                    server_group = update_ip_list(server_group, client_address)
+                    received_uid = str(message.split()[2])
+                    lcr_obj.create_IP_UID_mapping(client_address[0], received_uid)
+                    server_group = update_ip_list(server_group, client_address, lcr_obj.IP_UID_mapping)
                     unicast_message = (
                         f"ACK_LEADER {tcp_port} SERVER_GROUP {server_group}"
                     )
@@ -174,7 +176,7 @@ def udp_server(udp_port, tcp_port, is_leader_flag, lcr_obj=None):
                     udp_socket.sendto(leader_info.encode(), client_address)
                     print(f"Sent leader information to client {client_address}.")
                 elif message == "SEND_SERVER_GROUP":
-                    server_group = update_ip_list(server_group, client_address)
+                    server_group = update_ip_list(server_group, client_address, lcr_obj.IP_UID_mapping)
                     server_group_str = "UPDATED_SERVER_GROUP " + str(server_group)
                     print(
                         "server group before sending to all clients is ",
@@ -209,9 +211,9 @@ def udp_server(udp_port, tcp_port, is_leader_flag, lcr_obj=None):
     print("UDP server closed.")
 
 
-def update_ip_list(ip_list, new_tuple):
+def update_ip_list(ip_list, new_tuple, IP_UID_mapping=None):
     # Create a dictionary to store the latest tuple for each unique IP address
-    ip_dict = {ip: (ip, port) for ip, port in ip_list}
+    ip_dict = {ip: (ip, port, IP_UID_mapping[ip]) for ip, port in ip_list}
 
     # Update the dictionary with the new tuple
     ip_dict[new_tuple[0]] = new_tuple
@@ -230,13 +232,14 @@ def get_machines_ip():
     return udp_socket_for_ip_retrieval.getsockname()[0]
 
 
-def leader_election(udp_port, broadcast_ip):
+def leader_election(udp_port, broadcast_ip, lcr_obj=None):
     """Perform leader election by broadcasting and waiting for a response."""
     udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 
     print("Broadcasting leader election message...")
-    udp_socket.sendto("NEW_SERVER".encode(), (broadcast_ip, udp_port))
+    newserver_message = f"NEW_SERVER = {lcr_obj.uid}"
+    udp_socket.sendto(newserver_message.encode(), (broadcast_ip, udp_port))
 
     udp_socket.settimeout(TIMEOUT)
     try:
@@ -357,7 +360,7 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehand
                     list_of_objects.append(json.dumps(clientsharehandler, cls=share_handler.ClientShareHandlerEncoder))
                     list_of_objects.append(json.dumps(sharehandler, cls=share_handler.shareHandlerEncoder))
                     list_of_objects.append(json.dumps(client_share, cls=managingRequestfromClientEncoder))
-                    udp_socket.sendto(json.dumps(list_of_objects).encode(),('192.168.0.100', 12347))
+                    udp_socket.sendto(json.dumps(list_of_objects).encode(),(lcr_obj.UID_IP_mapping[lcr_obj.leader_uid], 12347))
                     MY_HOST = socket.gethostname()
                     MY_IP = socket.gethostbyname(MY_HOST)
                     LEADER_HOST = MY_IP
@@ -372,9 +375,6 @@ if __name__ == "__main__":
     sharehandler = None
     BROADCAST_IP = "192.168.0.255"
     # Perform leader election
-    is_leader, server_group = leader_election(SERVER_UDP_PORT, BROADCAST_IP)
-    setleaderstatus(is_leader)
-
     udp_socket_listener_for_election = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     udp_socket_listener_for_election.setsockopt(
         socket.SOL_SOCKET, socket.SO_REUSEADDR, 1
@@ -385,6 +385,8 @@ if __name__ == "__main__":
     lcr_obj = lcr_election_handler(
         get_machines_ip(), [], udp_socket_listener_for_election
     )
+    is_leader, server_group = leader_election(SERVER_UDP_PORT, BROADCAST_IP, lcr_obj)
+    setleaderstatus(is_leader)
     udp_thread = threading.Thread(
         target=udp_server, args=(SERVER_UDP_PORT, SERVER_TCP_PORT, getleaderstatus(), lcr_obj)
     )
