@@ -343,6 +343,8 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehand
                             sharehandler = share_handler.share_handler.from_dict(list_of_dicts[1])
                             # client_share = managingRequestfromClient.from_dict(list_of_dicts[2])
                             client_share = managingRequestfromClient(sharehandler, clientsharehandler, 'FOLLOWER')
+                            lcr_obj.IP_UID_mapping = list_of_dicts[3]
+                            lcr_obj.UID_IP_mapping = list_of_dicts[4]
                             setleaderstatus(True)
                             setclientshareobject(client_share) 
                             setclientsharehandlerobject(clientsharehandler)                    
@@ -358,6 +360,8 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehand
                     list_of_objects.append(json.dumps(clientsharehandler, cls=share_handler.ClientShareHandlerEncoder))
                     list_of_objects.append(json.dumps(sharehandler, cls=share_handler.shareHandlerEncoder))
                     list_of_objects.append(json.dumps(client_share, cls=managingRequestfromClientEncoder))
+                    list_of_objects.append(json.dumps(lcr_obj.IP_UID_mapping))
+                    list_of_objects.append(json.dumps(lcr_obj.UID_IP_mapping))
                     udp_socket.sendto(json.dumps(list_of_objects).encode(),(lcr_obj.UID_IP_mapping[lcr_obj.leader_uid], 12347))
                     MY_HOST = socket.gethostname()
                     MY_IP = socket.gethostbyname(MY_HOST)
