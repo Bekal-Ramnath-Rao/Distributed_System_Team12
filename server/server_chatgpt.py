@@ -283,6 +283,7 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehand
     global is_server_group_updated, i_initiated_election, server_group, LEADER_HOST, LEADER_TCP_PORT
     print("inside election thread")
     FIRST_TIME = True
+    latest_message = None
     while True:
 
         if is_server_group_updated:
@@ -304,7 +305,7 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehand
                     latest_message = data
             except BlockingIOError:
             # This exception occurs when the buffer is empty
-                if latest_message:
+                if latest_message is not None:
                     print("\nBuffer is empty. Processing the latest message:")
                     # print(f"Latest Message: {latest_message}")
                     # Process the latest message here
@@ -320,23 +321,35 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehand
         elif not FIRST_TIME and lcr_obj.election_done:
             if lcr_obj.get_leader_status():
                 if not getleaderstatus():
-                    data = lcr_obj.udp_socket.recvfrom(4096)
-                    received_data = lcr_obj.udp_socket.recvfrom(4096)
-                    deserialized_object = received_data[0].decode()
-                    deserialized_object_list  = ast.literal_eval(deserialized_object)
-                    list_of_dicts = [json.loads(item) for item in deserialized_object_list]
-                    print("Received serialized object list from leader", list_of_dicts)
-                    clientsharehandler = share_handler.clientshare_handler.from_dict(list_of_dicts[0])
-                    sharehandler = share_handler.share_handler.from_dict(list_of_dicts[1])
-                    # client_share = managingRequestfromClient.from_dict(list_of_dicts[2])
-                    client_share = managingRequestfromClient(sharehandler, clientsharehandler, 'FOLLOWER')
-                    setleaderstatus(True)
-                    setclientshareobject(client_share) 
-                    setclientsharehandlerobject(clientsharehandler)                    
-                    FIRST_TIME = True
-                    lcr_obj.election_done = False
-                    lcr_obj.is_leader=True
-                    FIRST_TIME = True
+                    #data = lcr_obj.udp_socket.recvfrom(4096)
+                    try:
+                        while True:
+                            received_data, addr = lcr_obj.udp_socket.recvfrom(1024)  # Buffer size of 1024 bytes
+                            print(f"Received message: {received_data.decode()} from {addr}")
+                            latest_message = received_data
+                        
+                    except BlockingIOError:
+                        # This exception occurs when the buffer is empty
+                        if latest_message is not None:
+                            print("\nBuffer is empty. Processing the latest message:")
+                            # print(f"Latest Message: {latest_message}")
+                            # Process the latest message here
+                            deserialized_object = latest_message[0].decode()
+                            deserialized_object_list  = ast.literal_eval(deserialized_object)
+                            list_of_dicts = [json.loads(item) for item in deserialized_object_list]
+                            print("Received serialized object list from leader", list_of_dicts)
+                            clientsharehandler = share_handler.clientshare_handler.from_dict(list_of_dicts[0])
+                            sharehandler = share_handler.share_handler.from_dict(list_of_dicts[1])
+                            # client_share = managingRequestfromClient.from_dict(list_of_dicts[2])
+                            client_share = managingRequestfromClient(sharehandler, clientsharehandler, 'FOLLOWER')
+                            setleaderstatus(True)
+                            setclientshareobject(client_share) 
+                            setclientsharehandlerobject(clientsharehandler)                    
+                            FIRST_TIME = True
+                            lcr_obj.election_done = False
+                            lcr_obj.is_leader=True
+                            FIRST_TIME = True
+                            latest_message = None  # Reset after processing
 
             else:
                 if getleaderstatus():
@@ -344,7 +357,7 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehand
                     list_of_objects.append(json.dumps(clientsharehandler, cls=share_handler.ClientShareHandlerEncoder))
                     list_of_objects.append(json.dumps(sharehandler, cls=share_handler.shareHandlerEncoder))
                     list_of_objects.append(json.dumps(client_share, cls=managingRequestfromClientEncoder))
-                    udp_socket.sendto(json.dumps(list_of_objects).encode(),('192.168.0.101', 12347))
+                    udp_socket.sendto(json.dumps(list_of_objects).encode(),('192.168.0.100', 12347))
                     MY_HOST = socket.gethostname()
                     MY_IP = socket.gethostbyname(MY_HOST)
                     LEADER_HOST = MY_IP
