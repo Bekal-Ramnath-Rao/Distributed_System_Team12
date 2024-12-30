@@ -402,7 +402,6 @@ if __name__ == "__main__":
         setclientshareobject(client_share)
         clientobjectflag = True
         server_group.append((get_machines_ip(), SERVER_TCP_PORT, str(lcr_obj.uid)))
-        lcr_obj.create_IP_UID_mapping(get_machines_ip(), str(lcr_obj.uid))
         udp_thread_for_election = threading.Thread(target=udp_server_managing_election,
                                                    args=(udp_socket_listener_for_election, 
                                                          lcr_obj, getleaderstatus(), clientsharehandler, 
@@ -414,6 +413,8 @@ if __name__ == "__main__":
         client_share = None
         server_group = ast.literal_eval(server_group)
         start_election(SERVER_UDP_PORT, BROADCAST_IP)
+    
+    lcr_obj.create_IP_UID_mapping(get_machines_ip(), str(lcr_obj.uid))
 
     udp_thread_for_election.start()
     # Start the TCP server (only if leader)
