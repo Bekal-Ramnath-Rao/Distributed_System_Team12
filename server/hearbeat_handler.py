@@ -91,6 +91,6 @@ class HeartbeatManager:
             """Send 'I AM THERE' response to the server."""
             # with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp_socket:
             response = "I AM THERE"
-            self.udp_socket.sendto(response.encode(), (self.leader_ip, self.port))
+            self.udp_socket.sendto(response.encode(), addr)
             print(f"Sent response to {addr}")
 

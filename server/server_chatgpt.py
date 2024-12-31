@@ -317,7 +317,7 @@ def server_reinitialise_UDPbuffer(udp_socket):
     udp_socket.bind(("", 12347))  # Listen on all interfaces
     return udp_socket
 
-def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehandler = None, client_share = None, sharehandler = None, global_data=None):
+def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehandler = None, client_share = None, sharehandler = None, globaldata= None):
 
     global is_server_group_updated, i_initiated_election, server_group, LEADER_HOST, LEADER_TCP_PORT
     print("inside election thread")
@@ -456,11 +456,12 @@ if __name__ == "__main__":
         heartbeat.run()
     else:
         udp_thread_for_election = threading.Thread(target=udp_server_managing_election,
-                                                   args=(udp_socket_listener_for_election, 
-                                                         lcr_obj, getleaderstatus()))
+                                                   args=(udp_socket_listener_for_election,
+                                                         lcr_obj, getleaderstatus(),None,None, None, global_data))
         client_share = None
         server_group = ast.literal_eval(server_group)
         heartbeat = hearbeat_handler.HeartbeatManager(12348, global_data, filter_server_group)
+        heartbeat.run()
         start_election(SERVER_UDP_PORT, BROADCAST_IP)
     
     lcr_obj.create_IP_UID_mapping(get_machines_ip(), str(lcr_obj.uid))
