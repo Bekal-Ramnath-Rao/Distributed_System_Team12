@@ -15,6 +15,11 @@ import hearbeat_handler
 class global_data_class:
     def __init__(self):
         self.global_flag = False
+        self.leader_flag = False
+    def getleaderflag(self):
+        return self.leader_flag
+    def setleaderflag(self,value):
+        self.leader_flag = value
     def setglobalflag(self,value):
         self.global_flag = value
     def getglobalflag(self):
@@ -67,6 +72,25 @@ def setleaderstatus(status):
 def getleaderstatus():
     global IS_LEADER
     return IS_LEADER
+
+def filter_server_group(client_list):
+    global	server_group
+    """
+    Filters the server group list based on the IP addresses present in the client list.
+
+    Args:
+        server_group (list of tuples): List containing tuples with (IP address, port, UID).
+        client_list (list of tuples): List containing tuples with (IP address, port).
+
+    Returns:
+        list of tuples: Filtered server group list where only tuples with matching IP addresses remain.
+    """
+
+    client_list.append(get_machines_ip())
+    client_list = list(set(client_list))
+
+    # Retain only those tuples in the server group where the IP address matches
+    server_group = [server for server in server_group if server[0] in client_list]
 
 def handle_client(conn, client_address,client_share = None, global_data=None):
     """Handle communication with a single client."""
@@ -293,7 +317,7 @@ def server_reinitialise_UDPbuffer(udp_socket):
     udp_socket.bind(("", 12347))  # Listen on all interfaces
     return udp_socket
 
-def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehandler = None, client_share = None, sharehandler = None):
+def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehandler = None, client_share = None, sharehandler = None, global_data=None):
 
     global is_server_group_updated, i_initiated_election, server_group, LEADER_HOST, LEADER_TCP_PORT
     print("inside election thread")
@@ -360,6 +384,7 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehand
                             lcr_obj.IP_UID_mapping = list_of_dicts[3]
                             lcr_obj.UID_IP_mapping = list_of_dicts[4]
                             setleaderstatus(True)
+                            global_data.setleaderflag(True)
                             setclientshareobject(client_share) 
                             setclientsharehandlerobject(clientsharehandler)                    
                             FIRST_TIME = True
@@ -381,9 +406,11 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehand
                     MY_IP = socket.gethostbyname(MY_HOST)
                     LEADER_HOST = MY_IP
                     setleaderstatus(False)
+                    global_data.setleaderflag(False)
                     lcr_obj.election_done = False
                     lcr_obj.is_leader=False
                     FIRST_TIME = True
+
 
 
 if __name__ == "__main__":
@@ -403,6 +430,7 @@ if __name__ == "__main__":
     is_leader, server_group = leader_election(SERVER_UDP_PORT, BROADCAST_IP, lcr_obj)
     setleaderstatus(is_leader)
     global_data = global_data_class()
+    global_data.setleaderflag(is_leader)
     udp_thread = threading.Thread(
         target=udp_server, args=(SERVER_UDP_PORT, SERVER_TCP_PORT, getleaderstatus(), lcr_obj, global_data)
     )
@@ -423,8 +451,8 @@ if __name__ == "__main__":
         udp_thread_for_election = threading.Thread(target=udp_server_managing_election,
                                                    args=(udp_socket_listener_for_election, 
                                                          lcr_obj, getleaderstatus(), clientsharehandler, 
-                                                         client_share, sharehandler))
-        heartbeat = hearbeat_handler.HeartbeatManager(12348, global_data)
+                                                         client_share, sharehandler,global_data))
+        heartbeat = hearbeat_handler.HeartbeatManager(12348, global_data, filter_server_group)
         heartbeat.run()
     else:
         udp_thread_for_election = threading.Thread(target=udp_server_managing_election,
@@ -432,6 +460,7 @@ if __name__ == "__main__":
                                                          lcr_obj, getleaderstatus()))
         client_share = None
         server_group = ast.literal_eval(server_group)
+        heartbeat = hearbeat_handler.HeartbeatManager(12348, global_data, filter_server_group)
         start_election(SERVER_UDP_PORT, BROADCAST_IP)
     
     lcr_obj.create_IP_UID_mapping(get_machines_ip(), str(lcr_obj.uid))

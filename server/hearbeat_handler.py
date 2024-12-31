@@ -3,7 +3,7 @@ import time
 import threading
 
 class HeartbeatManager:
-    def __init__(self, port=12348, global_data_obj=None):
+    def __init__(self, port=12348, global_data_obj=None, filter_server_group=None, getleaderstatusflag = None):
         self.port = port
         self.client_list = []
         self.leader_ip = None
@@ -11,6 +11,7 @@ class HeartbeatManager:
         self.udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.udp_socket.bind(("", 12348))
         self.global_flag_obj = global_data_obj
+        self.filter_server_group = filter_server_group
 
     def broadcast(self):
         """Broadcast 'ARE YOU THERE' to all clients."""
@@ -20,30 +21,38 @@ class HeartbeatManager:
         #     udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         #     udp_socket.settimeout(0.2)
         while True:
-            if self.global_flag_obj.getglobalflag():
+            if self.global_flag_obj.getleaderflag():
                 message = "ARE YOU THERE"
-                self.udp_socket.sendto(message.encode(), ("127.0.0.1", self.port))
+                self.udp_socket.sendto(message.encode(), ("192.168.0.255", self.port))
                 print("Broadcast sent: ARE YOU THERE")
                 time.sleep(2)  # Wait 3 seconds before the next broadcast
                 print("global flag is ", self.global_flag_obj.getglobalflag())
 
     def listen_responses(self):
         """Listen for responses from clients."""
-        # with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp_socket:
-        #     udp_socket.bind(("", self.port))
-        #     udp_socket.settimeout(3)  # 3-second timeout for responses
         while True:
-            try:
-                # self.udp_socket.settimeout(3)
-                if self.global_flag_obj.getglobalflag():
-                    data, addr = self.udp_socket.recvfrom(1024)
-                    if data.decode() == "I AM THERE":
-                        # with self.lock:
-                        self.client_list.add(addr[0])
-                        print(f"Received response from {addr[0]}")
-                        print("global flag is ", self.global_flag)
-            except socket.timeout:
-                pass
+            if self.global_flag_obj.getleaderflag():
+                try:
+                    # Temporary set to collect clients during the timeout period
+                    temp_client_list = []
+                    self.udp_socket.settimeout(3)  # Set a 3-second timeout for responses
+                    #self.udp_socket.setblocking(False)
+                    start_time = time.time()
+                    while (time.time() - start_time) < 3:
+                        print('timeout is ', self.udp_socket.gettimeout())
+                        data, addr = self.udp_socket.recvfrom(1024)
+                        if data.decode() == "I AM THERE":
+                            temp_client_list.append(addr[0])
+                            print(f"Received response from {addr[0]}")
+                            print("Global flag is", self.global_flag_obj.getglobalflag())
+                            
+                        #except self.udp_socket.timeout:
+                            # Timeout occurs, stop collecting and process the results
+                            #break
+                    # Update the main client list and call the filtered_group function
+                    self.filter_server_group(temp_client_list)
+                except Exception as e:
+                    print(f"Error in listen_responses: {e}")
 
     def monitor_clients(self):
         """Monitor the list of active clients."""
@@ -60,8 +69,7 @@ class HeartbeatManager:
         """Run the server threads."""
         threading.Thread(target=self.broadcast, daemon=True).start()
         threading.Thread(target=self.listen_responses, daemon=True).start()
-        # threading.Thread(target=self.listen_broadcasts, daemon=True).start()
-        # threading.Thread(target=self.respond_to_server, daemon=True).start()
+        threading.Thread(target=self.listen_broadcasts, daemon=True).start()
         # threading.Thread(target=self.monitor_clients, daemon=True).start()
         # self.monitor_clients()
 
@@ -71,16 +79,18 @@ class HeartbeatManager:
         # with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp_socket:
         #     udp_socket.bind(('', self.port))
         while True:
-            data, addr = self.udp_socket.recvfrom(1024)
-            message = data.decode()
-            if message == "ARE YOU THERE":
-                print(f"Received broadcast from {addr}")
-                self.respond_to_server(addr)
+            if not self.global_flag_obj.getleaderflag():
+                data, addr = self.udp_socket.recvfrom(1024)
+                message = data.decode()
+                if message == "ARE YOU THERE":
+                    print(f"Received broadcast from {addr}")
+                    self.respond_to_server(addr)
 
     def respond_to_server(self, addr):
-        """Send 'I AM THERE' response to the server."""
-        # with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp_socket:
-        response = "I AM THERE"
-        self.udp_socket.sendto(response.encode(), (self.leader_ip, self.port))
-        print(f"Sent response to {addr}")
+        if not self.global_flag_obj.getleaderflag():
+            """Send 'I AM THERE' response to the server."""
+            # with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp_socket:
+            response = "I AM THERE"
+            self.udp_socket.sendto(response.encode(), (self.leader_ip, self.port))
+            print(f"Sent response to {addr}")
 
