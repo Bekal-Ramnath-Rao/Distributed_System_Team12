@@ -10,7 +10,19 @@ import ast
 import json
 import pickle
 import ctypes
+import hearbeat_handler
 
+class global_data_class:
+    def __init__(self):
+        self.global_flag = False
+    def setglobalflag(self,value):
+        self.global_flag = value
+    def getglobalflag(self):
+        return self.global_flag
+
+
+    
+# global_flag = threading.Event()
 LEADER_HOST = None  # The leader's host address (dynamically updated)
 LEADER_TCP_PORT = None  # The leader's TCP port (dynamically updated)
 SERVER_UDP_PORT = 12345
@@ -56,13 +68,14 @@ def getleaderstatus():
     global IS_LEADER
     return IS_LEADER
 
-def handle_client(conn, client_address,client_share = None):
+def handle_client(conn, client_address,client_share = None, global_data=None):
     """Handle communication with a single client."""
     print(f"TCP connection established with {client_address}")
     try:
         while True:
             if getleaderstatus():
                 client_message = conn.recv(1024).decode()
+                
                 if not client_message or client_message.lower() == "exit":
                     print(f"Client {client_address} requested to close the connection.")
                     break
@@ -108,7 +121,7 @@ def handle_client(conn, client_address,client_share = None):
         print(f"Connection closed with {client_address}.")
 
 
-def tcp_server(tcp_port, is_leader, client_share):
+def tcp_server(tcp_port, is_leader, client_share, global_data=None):
     """Handle multiple clients via TCP."""
 
     tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -122,7 +135,7 @@ def tcp_server(tcp_port, is_leader, client_share):
                 if getclientshareobject() is not None:
                     conn, client_address = tcp_socket.accept()
                     client_thread = threading.Thread(
-                        target=handle_client, args=(conn, client_address, getclientshareobject())
+                        target=handle_client, args=(conn, client_address, getclientshareobject(), global_data)
                     )
                     client_thread.start()
                     print(f"Started thread for client {client_address}")
@@ -134,7 +147,7 @@ def tcp_server(tcp_port, is_leader, client_share):
         print("TCP server closed.")
 
 
-def udp_server(udp_port, tcp_port, is_leader_flag, lcr_obj=None):
+def udp_server(udp_port, tcp_port, is_leader_flag, lcr_obj=None, global_data=None):
     """Handle UDP communication for leader election, server group management, and client communication."""
     global LEADER_HOST, LEADER_TCP_PORT, server_group, is_server_group_updated
 
@@ -172,6 +185,7 @@ def udp_server(udp_port, tcp_port, is_leader_flag, lcr_obj=None):
                     print("current server group is ", server_group)
                 # Handle client inquiries to identify the leader
                 elif message == "WHO_IS_LEADER":
+                    # global_data.setglobalflag(True)
                     leader_info = f"LEADER {tcp_port}"
                     udp_socket.sendto(leader_info.encode(), client_address)
                     print(f"Sent leader information to client {client_address}.")
@@ -370,7 +384,6 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehand
                     lcr_obj.election_done = False
                     lcr_obj.is_leader=False
                     FIRST_TIME = True
-            
 
 
 if __name__ == "__main__":
@@ -389,8 +402,9 @@ if __name__ == "__main__":
     )
     is_leader, server_group = leader_election(SERVER_UDP_PORT, BROADCAST_IP, lcr_obj)
     setleaderstatus(is_leader)
+    global_data = global_data_class()
     udp_thread = threading.Thread(
-        target=udp_server, args=(SERVER_UDP_PORT, SERVER_TCP_PORT, getleaderstatus(), lcr_obj)
+        target=udp_server, args=(SERVER_UDP_PORT, SERVER_TCP_PORT, getleaderstatus(), lcr_obj, global_data)
     )
     time.sleep(1)
     udp_thread.start()
@@ -410,6 +424,8 @@ if __name__ == "__main__":
                                                    args=(udp_socket_listener_for_election, 
                                                          lcr_obj, getleaderstatus(), clientsharehandler, 
                                                          client_share, sharehandler))
+        heartbeat = hearbeat_handler.HeartbeatManager(12348, global_data)
+        heartbeat.run()
     else:
         udp_thread_for_election = threading.Thread(target=udp_server_managing_election,
                                                    args=(udp_socket_listener_for_election, 
@@ -422,4 +438,4 @@ if __name__ == "__main__":
 
     udp_thread_for_election.start()
     # Start the TCP server (only if leader)
-    tcp_server(SERVER_TCP_PORT, getleaderstatus(), client_share)
+    tcp_server(SERVER_TCP_PORT, getleaderstatus(), client_share, global_data)
