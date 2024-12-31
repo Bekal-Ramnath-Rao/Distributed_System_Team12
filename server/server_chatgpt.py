@@ -338,8 +338,12 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehand
             is_server_group_updated = False
             FIRST_TIME = False
             if i_initiated_election and not getleaderstatus():
-                lcr_obj.initiate_election()
-                i_initiated_election = False
+                if len(server_group) == 1:
+                    is_leader, server_group = leader_election(SERVER_UDP_PORT, BROADCAST_IP, lcr_obj)
+                    setleaderstatus(is_leader)
+                else:
+                    lcr_obj.initiate_election()
+                    i_initiated_election = False
 
         if not FIRST_TIME and not lcr_obj.election_done:
             try:
