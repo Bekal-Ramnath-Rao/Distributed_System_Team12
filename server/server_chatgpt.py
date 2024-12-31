@@ -26,6 +26,7 @@ class global_data_class:
         return self.global_flag
     
 def setservergroupupdatedflag(flag):
+    global is_server_group_updated
     is_server_group_updated = flag
 
     
@@ -93,6 +94,8 @@ def filter_server_group(client_list):
 
     # Retain only those tuples in the server group where the IP address matches
     server_group = [server for server in server_group if server[0] in client_list]
+
+    return server_group
 
 def handle_client(conn, client_address,client_share = None, global_data=None):
     """Handle communication with a single client."""
@@ -454,7 +457,7 @@ if __name__ == "__main__":
                                                    args=(udp_socket_listener_for_election, 
                                                          lcr_obj, getleaderstatus(), clientsharehandler, 
                                                          client_share, sharehandler,global_data))
-        heartbeat = hearbeat_handler.HeartbeatManager(12348, global_data, filter_server_group)
+        heartbeat = hearbeat_handler.HeartbeatManager(12348, global_data, filter_server_group, setservergroupupdatedflag)
         heartbeat.run()
     else:
         udp_thread_for_election = threading.Thread(target=udp_server_managing_election,

@@ -1,9 +1,10 @@
 import socket
 import time
 import threading
+import ast
 
 class HeartbeatManager:
-    def __init__(self, port=12348, global_data_obj=None, filter_server_group=None, getleaderstatusflag = None, setservergroupupdatedflag = None):
+    def __init__(self, port=12348, global_data_obj=None, filter_server_group=None, setservergroupupdatedflag = None):
         self.port = port
         self.client_list = []
         self.leader_ip = None
@@ -23,6 +24,7 @@ class HeartbeatManager:
         #     udp_socket.settimeout(0.2)
         while True:
             if self.global_flag_obj.getleaderflag():
+                server_group = self.filter_server_group()
                 message = "ARE YOU THERE"
                 self.udp_socket.sendto(message.encode(), ("192.168.0.255", self.port))
                 print("Broadcast sent: ARE YOU THERE")
@@ -36,7 +38,7 @@ class HeartbeatManager:
                 try:
                     # Temporary set to collect clients during the timeout period
                     temp_client_list = []
-                    #self.udp_socket.settimeout(3)  # Set a 3-second timeout for responses
+                    self.udp_socket.settimeout(5)  # Set a 3-second timeout for responses
                     #self.udp_socket.setblocking(False)
                     start_time = time.time()
                     while (time.time() - start_time) < 3:
@@ -51,7 +53,9 @@ class HeartbeatManager:
                             # Timeout occurs, stop collecting and process the results
                             #break
                     # Update the main client list and call the filtered_group function
-                    self.filter_server_group(temp_client_list)
+                    client_list = self.filter_server_group(temp_client_list)
+                    message = f"SERVER_GROUP {client_list}"
+                    self.udp_socket.sendto(message.encode(), ("192.168.0.255", self.port))
                 except Exception as e:
                     print(f"Error in listen_responses: {e}")
 
@@ -80,16 +84,25 @@ class HeartbeatManager:
         # with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp_socket:
         #     udp_socket.bind(('', self.port))
         while True:
-            if not self.global_flag_obj.getleaderflag():
-                start_time = time.time()
-                while (time.time() - start_time) < 2:
-                    data, addr = self.udp_socket.recvfrom(1024)
-                    message = data.decode()
-                    if message == "ARE YOU THERE":
-                        print(f"Received broadcast from {addr}")
-                        self.respond_to_server(addr)
-                #if(not message):
-                    #self.setservergroupupdatedflag(True)
+            try:
+                if not self.global_flag_obj.getleaderflag():
+                    start_time = time.time()
+                    self.udp_socket.settimeout(5)
+                    while (time.time() - start_time) < 2:
+                        try:
+                            data, addr = self.udp_socket.recvfrom(1024)
+                            message = data.decode()
+                            print(message)
+                            if message == "ARE YOU THERE":
+                                print(f"Received broadcast from {addr}")
+                                self.respond_to_server(addr)
+                            elif message.startswith("SERVER_GROUP"):
+                                self.filter_server_group(ast.literal_eval(message[13:]))
+                        except socket.timeout:
+                            print('timeout of the socket')
+                            self.setservergroupupdatedflag(True)
+            except:
+                print('Main exception')
 
 
 
