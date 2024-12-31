@@ -3,7 +3,7 @@ import time
 import threading
 
 class HeartbeatManager:
-    def __init__(self, port=12348, global_data_obj=None, filter_server_group=None, getleaderstatusflag = None):
+    def __init__(self, port=12348, global_data_obj=None, filter_server_group=None, getleaderstatusflag = None, setservergroupupdatedflag = None):
         self.port = port
         self.client_list = []
         self.leader_ip = None
@@ -12,6 +12,7 @@ class HeartbeatManager:
         self.udp_socket.bind(("", 12348))
         self.global_flag_obj = global_data_obj
         self.filter_server_group = filter_server_group
+        self.setservergroupupdatedflag = setservergroupupdatedflag
 
     def broadcast(self):
         """Broadcast 'ARE YOU THERE' to all clients."""
@@ -35,7 +36,7 @@ class HeartbeatManager:
                 try:
                     # Temporary set to collect clients during the timeout period
                     temp_client_list = []
-                    self.udp_socket.settimeout(3)  # Set a 3-second timeout for responses
+                    #self.udp_socket.settimeout(3)  # Set a 3-second timeout for responses
                     #self.udp_socket.setblocking(False)
                     start_time = time.time()
                     while (time.time() - start_time) < 3:
@@ -80,11 +81,17 @@ class HeartbeatManager:
         #     udp_socket.bind(('', self.port))
         while True:
             if not self.global_flag_obj.getleaderflag():
-                data, addr = self.udp_socket.recvfrom(1024)
-                message = data.decode()
-                if message == "ARE YOU THERE":
-                    print(f"Received broadcast from {addr}")
-                    self.respond_to_server(addr)
+                start_time = time.time()
+                while (time.time() - start_time) < 2:
+                    data, addr = self.udp_socket.recvfrom(1024)
+                    message = data.decode()
+                    if message == "ARE YOU THERE":
+                        print(f"Received broadcast from {addr}")
+                        self.respond_to_server(addr)
+                #if(not message):
+                    #self.setservergroupupdatedflag(True)
+
+
 
     def respond_to_server(self, addr):
         if not self.global_flag_obj.getleaderflag():

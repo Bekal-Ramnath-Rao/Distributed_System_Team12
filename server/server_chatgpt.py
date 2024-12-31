@@ -24,7 +24,9 @@ class global_data_class:
         self.global_flag = value
     def getglobalflag(self):
         return self.global_flag
-
+    
+def setservergroupupdatedflag(flag):
+    is_server_group_updated = flag
 
     
 # global_flag = threading.Event()
@@ -460,7 +462,7 @@ if __name__ == "__main__":
                                                          lcr_obj, getleaderstatus(),None,None, None, global_data))
         client_share = None
         server_group = ast.literal_eval(server_group)
-        heartbeat = hearbeat_handler.HeartbeatManager(12348, global_data, filter_server_group)
+        heartbeat = hearbeat_handler.HeartbeatManager(12348, global_data, filter_server_group, setservergroupupdatedflag)
         heartbeat.run()
         start_election(SERVER_UDP_PORT, BROADCAST_IP)
     
