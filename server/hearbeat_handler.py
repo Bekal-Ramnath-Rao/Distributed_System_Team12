@@ -28,8 +28,7 @@ class HeartbeatManager:
                 message = "ARE YOU THERE"
                 self.udp_socket.sendto(message.encode(), ("192.168.0.255", self.port))
                 print("Broadcast sent: ARE YOU THERE")
-                time.sleep(2)  # Wait 3 seconds before the next broadcast
-                print("global flag is ", self.global_flag_obj.getglobalflag())
+                time.sleep(5)  # Wait 3 seconds before the next broadcast
 
     def listen_responses(self):
         """Listen for responses from clients."""
@@ -42,24 +41,21 @@ class HeartbeatManager:
                     self.udp_socket.settimeout(5)  # Set a 3-second timeout for responses
                     #self.udp_socket.setblocking(False)
                     start_time = time.time()
-                    while (time.time() - start_time) < 5:
+                    while (time.time() - start_time) < 4:
                         print('timeout is ', self.udp_socket.gettimeout())
                         data, addr = self.udp_socket.recvfrom(1024)
                         if data.decode() == "I AM THERE":
                             temp_client_list.append(addr[0])
                             print(f"Received response from {addr[0]}")
-                            print("Global flag is", self.global_flag_obj.getglobalflag())
                             
                         #except self.udp_socket.timeout:
                             # Timeout occurs, stop collecting and process the results
                             #break
                     # Update the main client list and call the filtered_group function
-                    counter = counter + 1
-                    if(counter == 2):
-                        client_list = self.filter_server_group(temp_client_list)
-                        counter = 0
-                        message = f"SERVER_GROUP {client_list}"
-                        self.udp_socket.sendto(message.encode(), ("192.168.0.255", self.port))
+                    client_list = self.filter_server_group(temp_client_list)
+                    counter = 0
+                    message = f"SERVER_GROUP {client_list}"
+                    self.udp_socket.sendto(message.encode(), ("192.168.0.255", self.port))
                 except Exception as e:
                     print(f"Error in listen_responses: {e}")
 
@@ -87,6 +83,7 @@ class HeartbeatManager:
         """Listen for broadcast messages and respond to 'ARE YOU THERE'."""
         # with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp_socket:
         #     udp_socket.bind(('', self.port))
+        time.sleep(3)
         while True:
             try:
                 temp_client_list = []
@@ -100,15 +97,14 @@ class HeartbeatManager:
                             print(message)
                             if message == "ARE YOU THERE":
                                 print(f"Received broadcast from {addr}")
-                                self.respond_to_server(addr)
+                                self.respond_to_server(addr,start_time)
                             elif message.startswith("SERVER_GROUP"):
                                 for server in ast.literal_eval(message[13:]):
                                     temp_client_list.append(server[0])
                                 server_group_local = self.filter_server_group(temp_client_list)
                                 for server in server_group_local:
                                     if addr[0] == server[0]:
-                                        leader_info = server[0]
-                                server_group_local.remove(leader_info)
+                                        server_group_local.remove(server)
 
                         except socket.timeout:
                             print('timeout of the socket')
@@ -120,8 +116,8 @@ class HeartbeatManager:
 
 
 
-    def respond_to_server(self, addr):
-        if not self.global_flag_obj.getleaderflag():
+    def respond_to_server(self, addr, start_time):
+        if not self.global_flag_obj.getleaderflag() and not self.lcr_obj.is_pariticipant and ((time.time() - start_time) > 5) :
             """Send 'I AM THERE' response to the server."""
             # with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp_socket:
             response = "I AM THERE"

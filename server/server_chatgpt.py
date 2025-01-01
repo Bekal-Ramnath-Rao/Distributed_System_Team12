@@ -232,6 +232,7 @@ def udp_server(udp_port, tcp_port, is_leader_flag, lcr_obj=None, global_data=Non
                     print(f"Sent server group to ALL clients")
                     is_server_group_updated = True
                     lcr_obj.election_done = False
+                    time.sleep(2)
 
             else:
                 # Followers listen for leader acknowledgment or respond to client inquiries
@@ -281,6 +282,7 @@ def leader_election(udp_port, broadcast_ip, lcr_obj=None):
     print("Broadcasting leader election message...")
     newserver_message = f"NEW_SERVER = {lcr_obj.uid}"
     udp_socket.sendto(newserver_message.encode(), (broadcast_ip, udp_port))
+    lcr_obj.is_pariticipant = False
 
     udp_socket.settimeout(TIMEOUT)
     try:
@@ -350,7 +352,7 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehand
             lcr_obj.is_a_pariticipant = False
             try:
                 while True:
-                    data, addr = lcr_obj.udp_socket.recvfrom(1024)  # Buffer size of 1024 bytes
+                    data, addr = lcr_obj.udp_socket.recvfrom(4096)  # Buffer size of 1024 bytes
                     print(f"Received message: {data.decode()} from {addr}")
                     latest_message = data
             except BlockingIOError:
@@ -374,7 +376,7 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehand
                     #data = lcr_obj.udp_socket.recvfrom(4096)
                     try:
                         while True:
-                            received_data, addr = lcr_obj.udp_socket.recvfrom(1024)  # Buffer size of 1024 bytes
+                            received_data, addr = lcr_obj.udp_socket.recvfrom(4096)  # Buffer size of 1024 bytes
                             print(f"Received message: {received_data.decode()} from {addr}")
                             latest_message = received_data
                         
@@ -463,8 +465,8 @@ if __name__ == "__main__":
                                                    args=(udp_socket_listener_for_election, 
                                                          lcr_obj, getleaderstatus(), clientsharehandler, 
                                                          client_share, sharehandler,global_data))
-        heartbeat = hearbeat_handler.HeartbeatManager(12348, global_data, filter_server_group, setservergroupupdatedflag)
-        #heartbeat.run()
+        heartbeat = hearbeat_handler.HeartbeatManager(12348, global_data, filter_server_group, setservergroupupdatedflag, lcr_obj)
+        heartbeat.run()
     else:
         udp_thread_for_election = threading.Thread(target=udp_server_managing_election,
                                                    args=(udp_socket_listener_for_election,
@@ -472,7 +474,7 @@ if __name__ == "__main__":
         client_share = None
         server_group = ast.literal_eval(server_group)
         heartbeat = hearbeat_handler.HeartbeatManager(12348, global_data, filter_server_group, setservergroupupdatedflag, lcr_obj)
-        #heartbeat.run()
+        heartbeat.run()
         start_election(SERVER_UDP_PORT, BROADCAST_IP)
     
     lcr_obj.create_IP_UID_mapping(get_machines_ip(), str(lcr_obj.uid))
