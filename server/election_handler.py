@@ -16,7 +16,7 @@ class lcr_election_handler:
         self.is_a_pariticipant = False
         self.ip = ip
         self.port = None
-        self.uid = 'fffdfe42-c827-11ef-aa5b-106838a89953'  # Generating a Version 1 UUID
+        self.uid = uuid.uuid1()  # Generating a Version 1 UUID
         self.leader_uid = None
         self.udp_socket = udp_socket_listener_for_election
         self.neighbour = None
