@@ -346,6 +346,7 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehand
                     i_initiated_election = False
 
         if not FIRST_TIME and not lcr_obj.election_done:
+            lcr_obj.is_a_pariticipant = False
             try:
                 while True:
                     data, addr = lcr_obj.udp_socket.recvfrom(1024)  # Buffer size of 1024 bytes

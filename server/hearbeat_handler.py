@@ -89,10 +89,11 @@ class HeartbeatManager:
         #     udp_socket.bind(('', self.port))
         while True:
             try:
+                temp_client_list = []
                 if not self.global_flag_obj.getleaderflag():
                     start_time = time.time()
                     self.udp_socket.settimeout(5)
-                    while (time.time() - start_time) < 2:
+                    while (time.time() - start_time) < 5:
                         try:
                             data, addr = self.udp_socket.recvfrom(1024)
                             message = data.decode()
@@ -101,16 +102,18 @@ class HeartbeatManager:
                                 print(f"Received broadcast from {addr}")
                                 self.respond_to_server(addr)
                             elif message.startswith("SERVER_GROUP"):
-                                server_group = self.filter_server_group(ast.literal_eval(message[13:]))
-                                for server in server_group:
+                                for server in ast.literal_eval(message[13:]):
+                                    temp_client_list.append(server[0])
+                                server_group_local = self.filter_server_group(temp_client_list)
+                                for server in server_group_local:
                                     if addr[0] == server[0]:
-                                        leader_info = server
-                                server_group.remove(leader_info)
+                                        leader_info = server[0]
+                                server_group_local.remove(leader_info)
 
                         except socket.timeout:
                             print('timeout of the socket')
                             self.lcr_obj.election_done = False
-                            self.filter_server_group(server_group)
+                            self.filter_server_group(server_group_local)
                             self.setservergroupupdatedflag(True)
             except:
                 print('Main exception')
