@@ -27,47 +27,41 @@ class HeartbeatManager:
         #     udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         #     udp_socket.settimeout(0.2)
         while True:
-            if not allowlitsenresponsethread:
-                if self.global_flag_obj.getleaderflag() and not self.lcr_obj.is_a_pariticipant:
-                    message = "ARE YOU THERE"
-                    self.udp_socket.sendto(message.encode(), ("192.168.0.255", self.port))
-                    print("Broadcast sent: ARE YOU THERE")
-                    time.sleep(5)  # Wait 3 seconds before the next broadcast
-                    allowlitsenresponsethread = True
+            if self.global_flag_obj.getleaderflag() and not self.lcr_obj.is_a_pariticipant:
+                message = "ARE YOU THERE"
+                self.udp_socket.sendto(message.encode(), ("192.168.0.255", self.port))
+                print("Broadcast sent: ARE YOU THERE")
+                time.sleep(5)  # Wait 3 seconds before the next broadcast
+                self.listen_responses()
 
     def listen_responses(self):
-        global allowlitsenresponsethread
         """Listen for responses from clients."""
         counter = 0
         while True:
-            if not allowlitsenresponsethread:
-                if self.global_flag_obj.getleaderflag() and not self.lcr_obj.is_a_pariticipant:
-                    try:
-                        # Temporary set to collect clients during the timeout period
-                        temp_client_list = []
-                        self.udp_socket.settimeout(5)  # Set a 3-second timeout for responses
-                        #self.udp_socket.setblocking(False)
-                        start_time = time.time()
-                        while (time.time() - start_time) < 4:
-                            print('timeout is ', self.udp_socket.gettimeout())
-                            data, addr = self.udp_socket.recvfrom(1024)
-                            if data.decode() == "I AM THERE":
-                                # if not self.lcr_obj.is_a_pariticipant:
-                                temp_client_list.append(addr[0])
-                                print(f"Received response from {addr[0]}")
+            if self.global_flag_obj.getleaderflag() and not self.lcr_obj.is_a_pariticipant:
+                try:
+                    # Temporary set to collect clients during the timeout period
+                    temp_client_list = []
+                    self.udp_socket.settimeout(5)  # Set a 3-second timeout for responses
+                    #self.udp_socket.setblocking(False)
+                    start_time = time.time()
+                    while (time.time() - start_time) < 4:
+                        print('timeout is ', self.udp_socket.gettimeout())
+                        data, addr = self.udp_socket.recvfrom(1024)
+                        if data.decode() == "I AM THERE":
+                            # if not self.lcr_obj.is_a_pariticipant:
+                            temp_client_list.append(addr[0])
+                            print(f"Received response from {addr[0]}")
 
-                        counter = counter + 1
-                        if counter == 2:
-                        # if not self.lcr_obj.is_a_pariticipant:
-                            print("temp_client_list is ", temp_client_list)
-                            client_list = self.filter_server_group(temp_client_list, self.lcr_obj)
-                            message = f"SERVER_GROUP {client_list}"
-                            self.udp_socket.sendto(message.encode(), ("192.168.0.255", self.port))
-                            print("sent latest serer group" , client_list)
-                            counter = 0
-                    except Exception as e:
-                        print(f"Error in listen_responses: {e}")
-                allowlitsenresponsethread = False
+                # if not self.lcr_obj.is_a_pariticipant:
+                    print("temp_client_list is ", temp_client_list)
+                    client_list = self.filter_server_group(temp_client_list, self.lcr_obj)
+                    message = f"SERVER_GROUP {client_list}"
+                    self.udp_socket.sendto(message.encode(), ("192.168.0.255", self.port))
+                    print("sent latest serer group" , client_list)
+
+                except Exception as e:
+                    print(f"Error in listen_responses: {e}")
 
     def monitor_clients(self):
         """Monitor the list of active clients."""
@@ -83,7 +77,6 @@ class HeartbeatManager:
     def run(self):
         """Run the server threads."""
         threading.Thread(target=self.broadcast, daemon=True).start()
-        threading.Thread(target=self.listen_responses, daemon=True).start()
         threading.Thread(target=self.listen_broadcasts, daemon=True).start()
         # threading.Thread(target=self.monitor_clients, daemon=True).start()
         # self.monitor_clients()
