@@ -43,6 +43,7 @@ server_group = []  # List of (host, port) tuples for all servers in the group
 neighbor_sockets = []  # List of active neighbor connections
 clientobjectflag = False
 COLLECTION_THREAD_IS = []
+pending_ip_list = []
 
 import threading
 import time
@@ -77,7 +78,7 @@ def getleaderstatus():
     return IS_LEADER
 
 def filter_server_group(client_list, lcr_obj):
-    global	server_group
+    global	server_group, pending_ip_list
     """
     Filters the server group list based on the IP addresses present in the client list.
 
@@ -88,9 +89,24 @@ def filter_server_group(client_list, lcr_obj):
     Returns:
         list of tuples: Filtered server group list where only tuples with matching IP addresses remain.
     """
+    # pending_ip_list = ["192.168.0.1"]
+    # temp_list = ["192.168.0.2"]
+    # print("before pending ip list is ", pending_ip_list)
+    # print("client list after ", client_list)
+    
+    # print("after pending ip list is  ", pending_ip_list)
+    # print("client list before ", client_list)
+    # print("pending ip list is ", pending_ip_list)
 
     client_list.append(get_machines_ip())
     client_list = list(set(client_list))
+
+    for each_ip in pending_ip_list:
+        if each_ip in client_list:
+            pending_ip_list.remove(each_ip)
+        else:
+            client_list.append(each_ip)
+
     print("client list in filterred function is ", client_list)
     print("server group before filtering ", server_group)
     # Retain only those tuples in the server group where the IP address matches
@@ -180,7 +196,7 @@ def tcp_server(tcp_port, is_leader, client_share, global_data=None):
 
 def udp_server(udp_port, tcp_port, is_leader_flag, lcr_obj=None, global_data=None):
     """Handle UDP communication for leader election, server group management, and client communication."""
-    global LEADER_HOST, LEADER_TCP_PORT, server_group, is_server_group_updated
+    global LEADER_HOST, LEADER_TCP_PORT, server_group, is_server_group_updated, pending_ip_list
 
     udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -215,6 +231,7 @@ def udp_server(udp_port, tcp_port, is_leader_flag, lcr_obj=None, global_data=Non
                     print(f"Added new server {client_address} to the group.")
                     print("current server group is ", server_group)
                     lcr_obj.is_a_pariticipant=True
+                    pending_ip_list.append(client_address[0])
                 # Handle client inquiries to identify the leader
                 elif message == "WHO_IS_LEADER":
                     # global_data.setglobalflag(True)
