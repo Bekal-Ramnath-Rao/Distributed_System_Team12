@@ -76,7 +76,7 @@ def getleaderstatus():
     global IS_LEADER
     return IS_LEADER
 
-def filter_server_group(client_list):
+def filter_server_group(client_list, lcr_obj):
     global	server_group
     """
     Filters the server group list based on the IP addresses present in the client list.
@@ -94,7 +94,8 @@ def filter_server_group(client_list):
     print("client list in filterred function is ", client_list)
     print("server group before filtering ", server_group)
     # Retain only those tuples in the server group where the IP address matches
-    server_group = [server for server in server_group if server[0] in client_list]
+    if not lcr_obj.is_pariticipant:
+        server_group = [server for server in server_group if server[0] in client_list]
     print("server group after filtering ", server_group)
     return server_group
 
@@ -213,7 +214,7 @@ def udp_server(udp_port, tcp_port, is_leader_flag, lcr_obj=None, global_data=Non
                     udp_socket.sendto(unicast_message.encode(), client_address)
                     print(f"Added new server {client_address} to the group.")
                     print("current server group is ", server_group)
-                    # lcr_obj.is_a_pariticipant=True
+                    lcr_obj.is_a_pariticipant=True
                 # Handle client inquiries to identify the leader
                 elif message == "WHO_IS_LEADER":
                     # global_data.setglobalflag(True)

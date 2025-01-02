@@ -103,7 +103,7 @@ class HeartbeatManager:
                             elif message.startswith("SERVER_GROUP"):
                                 for server in ast.literal_eval(message[13:]):
                                     temp_client_list.append(server[0][0])
-                                server_group_local = self.filter_server_group(temp_client_list)
+                                server_group_local = self.filter_server_group(temp_client_list, self.lcr_obj)
                                 for server in server_group_local:
                                     if addr[0] == server[0][0]:
                                         leader_info = server[0][0]
@@ -120,7 +120,7 @@ class HeartbeatManager:
 
 
     def respond_to_server(self, addr, start_time):
-        if not self.global_flag_obj.getleaderflag() and not self.lcr_obj.is_pariticipant and ((time.time() - start_time) > 5) :
+        if not self.global_flag_obj.getleaderflag() and not self.lcr_obj.is_pariticipant :
             """Send 'I AM THERE' response to the server."""
             # with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp_socket:
             response = "I AM THERE"
