@@ -114,9 +114,6 @@ def filter_server_group(client_list, lcr_obj):
             ip_count[each_ip] = 0
         else:
             client_list.append(each_ip)
-
-    print("client list in filterred function is ", client_list)
-    print("server group before filtering ", server_group)
     # Retain only those tuples in the server group where the IP address matches
     if not lcr_obj.is_pariticipant:
         server_group = [server for server in server_group if server[0] in client_list]

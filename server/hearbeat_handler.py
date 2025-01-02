@@ -17,6 +17,7 @@ class HeartbeatManager:
         self.setservergroupupdatedflag = setservergroupupdatedflag
         self.lcr_obj = lcr_obj
         self.previous_temp_client_list = []
+        self.compare_counter = 0
 
     def broadcast(self):
         """Broadcast 'ARE YOU THERE' to all clients."""
@@ -30,37 +31,38 @@ class HeartbeatManager:
 
     def listen_responses(self):
         """Listen for responses from clients."""
-        temp_client_list = []
         start_time = time.time()
         counter=0
-        compare_counter = 0
+        self.temp_client_list = []
         while counter < 2:
             # print("count is ", counter, " ", time.time())
             while (time.time() - start_time) < 4:
                 try:
                     data, addr = self.udp_socket.recvfrom(1024)
-                    if data.decode() == "I AM THERE":
-                        temp_client_list.append(addr[0])
-
-
+                    if data.decode() == "I AM THERE": 
+                        self.temp_client_list.append(addr[0])
                         print(f"Received response from {addr[0]}")
-
                 except BlockingIOError:
                     # print("BlockingIOError data not received")
                     pass
             counter+=1
         if(not len(self.previous_temp_client_list)):
-            self.previous_temp_client_list = temp_client_list
-        print("temp_client_list is ", temp_client_list) 
+            self.previous_temp_client_list = self.temp_client_list.copy()
+        print("temp_client_list is ", self.temp_client_list)
+        print("previous temp client list", self.previous_temp_client_list) 
         # considering a glitch for UDP
-        if (set(temp_client_list) != set(self.previous_temp_client_list)) and (compare_counter != 1) :
-            temp_client_list = self.previous_temp_client_list
-            compare_counter += 1
+        if (set(self.temp_client_list) != set(self.previous_temp_client_list)): 
+            if(self.compare_counter < 1) :
+                self.temp_client_list = self.previous_temp_client_list
+                self.compare_counter += 1
+            elif(self.compare_counter == 1):
+                self.previous_temp_client_list = []
+                self.compare_counter
 
-        client_list = self.filter_server_group(temp_client_list, self.lcr_obj)
+        client_list = self.filter_server_group(self.temp_client_list.copy(), self.lcr_obj)
         message = f"SERVER_GROUP {client_list}"
         self.udp_socket.sendto(message.encode(), ("192.168.0.255", self.port))
-        self.previous_temp_client_list = temp_client_list
+        self.previous_temp_client_list = self.temp_client_list.copy()
         print("sent latest server group" , client_list)
            
 
