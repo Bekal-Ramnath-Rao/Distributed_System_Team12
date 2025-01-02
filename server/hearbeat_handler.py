@@ -16,6 +16,7 @@ class HeartbeatManager:
         self.filter_server_group = filter_server_group
         self.setservergroupupdatedflag = setservergroupupdatedflag
         self.lcr_obj = lcr_obj
+        self.previous_temp_client_list = []
 
     def broadcast(self):
         """Broadcast 'ARE YOU THERE' to all clients."""
@@ -30,7 +31,6 @@ class HeartbeatManager:
     def listen_responses(self):
         """Listen for responses from clients."""
         temp_client_list = []
-        previous_temp_client_list = []
         start_time = time.time()
         counter=0
         compare_counter = 0
@@ -41,23 +41,26 @@ class HeartbeatManager:
                     data, addr = self.udp_socket.recvfrom(1024)
                     if data.decode() == "I AM THERE":
                         temp_client_list.append(addr[0])
+
+
                         print(f"Received response from {addr[0]}")
 
                 except BlockingIOError:
                     # print("BlockingIOError data not received")
                     pass
             counter+=1
-            
+        if(not len(self.previous_temp_client_list)):
+            self.previous_temp_client_list = temp_client_list
         print("temp_client_list is ", temp_client_list) 
         # considering a glitch for UDP
-        if (set(temp_client_list) != set(previous_temp_client_list)) and (compare_counter != 1) :
-            temp_client_list = previous_temp_client_list
+        if (set(temp_client_list) != set(self.previous_temp_client_list)) and (compare_counter != 1) :
+            temp_client_list = self.previous_temp_client_list
             compare_counter += 1
 
         client_list = self.filter_server_group(temp_client_list, self.lcr_obj)
         message = f"SERVER_GROUP {client_list}"
         self.udp_socket.sendto(message.encode(), ("192.168.0.255", self.port))
-        previous_temp_client_list = temp_client_list
+        self.previous_temp_client_list = temp_client_list
         print("sent latest server group" , client_list)
            
 
