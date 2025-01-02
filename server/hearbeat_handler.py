@@ -24,7 +24,7 @@ class HeartbeatManager:
         #     udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         #     udp_socket.settimeout(0.2)
         while True:
-            if self.global_flag_obj.getleaderflag():
+            if self.global_flag_obj.getleaderflag() and not self.lcr_obj.is_a_pariticipant:
                 message = "ARE YOU THERE"
                 self.udp_socket.sendto(message.encode(), ("192.168.0.255", self.port))
                 print("Broadcast sent: ARE YOU THERE")
@@ -34,7 +34,7 @@ class HeartbeatManager:
         """Listen for responses from clients."""
         counter = 0
         while True:
-            if self.global_flag_obj.getleaderflag():
+            if self.global_flag_obj.getleaderflag() and not self.lcr_obj.is_a_pariticipant:
                 try:
                     # Temporary set to collect clients during the timeout period
                     temp_client_list = []
@@ -45,17 +45,19 @@ class HeartbeatManager:
                         print('timeout is ', self.udp_socket.gettimeout())
                         data, addr = self.udp_socket.recvfrom(1024)
                         if data.decode() == "I AM THERE":
+                            # if not self.lcr_obj.is_a_pariticipant:
                             temp_client_list.append(addr[0])
                             print(f"Received response from {addr[0]}")
-                            
-                        #except self.udp_socket.timeout:
-                            # Timeout occurs, stop collecting and process the results
-                            #break
-                    # Update the main client list and call the filtered_group function
-                    client_list = self.filter_server_group(temp_client_list)
-                    counter = 0
-                    message = f"SERVER_GROUP {client_list}"
-                    self.udp_socket.sendto(message.encode(), ("192.168.0.255", self.port))
+
+                    counter = counter + 1
+                    if counter == 2:
+                    # if not self.lcr_obj.is_a_pariticipant:
+                        print("temp_client_list is ", temp_client_list)
+                        client_list = self.filter_server_group(temp_client_list)
+                        message = f"SERVER_GROUP {client_list}"
+                        self.udp_socket.sendto(message.encode(), ("192.168.0.255", self.port))
+                        print("sent latest serer group" , client_list)
+                        counter = 0
                 except Exception as e:
                     print(f"Error in listen_responses: {e}")
 
@@ -100,11 +102,12 @@ class HeartbeatManager:
                                 self.respond_to_server(addr,start_time)
                             elif message.startswith("SERVER_GROUP"):
                                 for server in ast.literal_eval(message[13:]):
-                                    temp_client_list.append(server[0])
+                                    temp_client_list.append(server[0][0])
                                 server_group_local = self.filter_server_group(temp_client_list)
                                 for server in server_group_local:
-                                    if addr[0] == server[0]:
-                                        server_group_local.remove(server)
+                                    if addr[0] == server[0][0]:
+                                        leader_info = server[0][0]
+                                server_group_local.remove(leader_info)
 
                         except socket.timeout:
                             print('timeout of the socket')

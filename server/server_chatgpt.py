@@ -91,10 +91,11 @@ def filter_server_group(client_list):
 
     client_list.append(get_machines_ip())
     client_list = list(set(client_list))
-
+    print("client list in filterred function is ", client_list)
+    print("server group before filtering ", server_group)
     # Retain only those tuples in the server group where the IP address matches
     server_group = [server for server in server_group if server[0] in client_list]
-
+    print("server group after filtering ", server_group)
     return server_group
 
 def handle_client(conn, client_address,client_share = None, global_data=None):
@@ -212,6 +213,7 @@ def udp_server(udp_port, tcp_port, is_leader_flag, lcr_obj=None, global_data=Non
                     udp_socket.sendto(unicast_message.encode(), client_address)
                     print(f"Added new server {client_address} to the group.")
                     print("current server group is ", server_group)
+                    # lcr_obj.is_a_pariticipant=True
                 # Handle client inquiries to identify the leader
                 elif message == "WHO_IS_LEADER":
                     # global_data.setglobalflag(True)
