@@ -3,8 +3,6 @@ import time
 import threading
 import ast
 
-allowlitsenresponsethread = False
-
 class HeartbeatManager:
     def __init__(self, port=12348, global_data_obj=None, filter_server_group=None, setservergroupupdatedflag = None, lcr_obj = None):
         self.port = port
@@ -20,7 +18,6 @@ class HeartbeatManager:
         self.lcr_obj = lcr_obj
 
     def broadcast(self):
-        global allowlitsenresponsethread
         """Broadcast 'ARE YOU THERE' to all clients."""
         while True:
             if self.global_flag_obj.getleaderflag() and not self.lcr_obj.is_a_pariticipant:
@@ -36,8 +33,8 @@ class HeartbeatManager:
         start_time = time.time()
         counter=0
         while counter < 2:
-            print("count is ", counter, " ", time.time())
-            while (time.time() - start_time) < 8:
+            # print("count is ", counter, " ", time.time())
+            while (time.time() - start_time) < 4:
                 try:
                     data, addr = self.udp_socket.recvfrom(1024)
                     if data.decode() == "I AM THERE":
@@ -53,7 +50,7 @@ class HeartbeatManager:
         client_list = self.filter_server_group(temp_client_list, self.lcr_obj)
         message = f"SERVER_GROUP {client_list}"
         self.udp_socket.sendto(message.encode(), ("192.168.0.255", self.port))
-        print("sent latest serer group" , client_list)
+        print("sent latest server group" , client_list)
            
 
     def monitor_clients(self):
@@ -71,8 +68,6 @@ class HeartbeatManager:
         """Run the server threads."""
         threading.Thread(target=self.broadcast, daemon=True).start()
         threading.Thread(target=self.listen_broadcasts, daemon=True).start()
-        # threading.Thread(target=self.monitor_clients, daemon=True).start()
-        # self.monitor_clients()
 
     
     def listen_broadcasts(self):
@@ -112,10 +107,9 @@ class HeartbeatManager:
 
 
     def respond_to_server(self, addr, start_time):
-        if not self.global_flag_obj.getleaderflag() and not self.lcr_obj.is_pariticipant :
-            """Send 'I AM THERE' response to the server."""
-            # with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp_socket:
-            response = "I AM THERE"
-            self.udp_socket.sendto(response.encode(), addr)
-            print(f"Sent response to {addr}")
+        """Send 'I AM THERE' response to the server."""
+        # with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp_socket:
+        response = "I AM THERE"
+        self.udp_socket.sendto(response.encode(), addr)
+        print(f"Sent response to {addr}")
 
