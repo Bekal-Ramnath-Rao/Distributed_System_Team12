@@ -115,7 +115,7 @@ def filter_server_group(client_list, lcr_obj):
         else:
             client_list.append(each_ip)
     # Retain only those tuples in the server group where the IP address matches
-    if not lcr_obj.is_pariticipant:
+    if not lcr_obj.is_a_pariticipant:
         server_group = [server for server in server_group if server[0] in client_list]
     print("server group after filtering ", server_group)
     return server_group
@@ -309,7 +309,7 @@ def leader_election(udp_port, broadcast_ip, lcr_obj=None):
     print("Broadcasting leader election message...")
     newserver_message = f"NEW_SERVER = {lcr_obj.uid}"
     udp_socket.sendto(newserver_message.encode(), (broadcast_ip, udp_port))
-    lcr_obj.is_pariticipant = False
+    #lcr_obj.is_a_pariticipant = False
 
     udp_socket.settimeout(TIMEOUT)
     try:
