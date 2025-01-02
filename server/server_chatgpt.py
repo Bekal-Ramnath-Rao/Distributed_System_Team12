@@ -12,6 +12,11 @@ import pickle
 import ctypes
 import hearbeat_handler
 
+from collections import defaultdict
+
+# Initialize a count dictionary globally
+ip_count = defaultdict(int)
+
 class global_data_class:
     def __init__(self):
         self.global_flag = False
@@ -100,10 +105,13 @@ def filter_server_group(client_list, lcr_obj):
 
     client_list.append(get_machines_ip())
     client_list = list(set(client_list))
+    pending_ip_list = list(set(pending_ip_list))
 
     for each_ip in pending_ip_list:
-        if each_ip in client_list:
+        ip_count[each_ip] += 1
+        if each_ip in client_list and ip_count[each_ip] > 2:
             pending_ip_list.remove(each_ip)
+            ip_count[each_ip] = 0
         else:
             client_list.append(each_ip)
 
@@ -220,6 +228,7 @@ def udp_server(udp_port, tcp_port, is_leader_flag, lcr_obj=None, global_data=Non
             if getleaderstatus():
                 # Leader responds to server broadcast messages
                 if message.startswith("NEW_SERVER"):
+                    pending_ip_list.append(client_address[0])
                     # server_group.append(client_address)
                     received_uid = str(message.split()[2])
                     lcr_obj.create_IP_UID_mapping(client_address[0], received_uid)
@@ -231,7 +240,6 @@ def udp_server(udp_port, tcp_port, is_leader_flag, lcr_obj=None, global_data=Non
                     print(f"Added new server {client_address} to the group.")
                     print("current server group is ", server_group)
                     lcr_obj.is_a_pariticipant=True
-                    pending_ip_list.append(client_address[0])
                 # Handle client inquiries to identify the leader
                 elif message == "WHO_IS_LEADER":
                     # global_data.setglobalflag(True)
@@ -252,7 +260,8 @@ def udp_server(udp_port, tcp_port, is_leader_flag, lcr_obj=None, global_data=Non
                     print(f"Sent server group to ALL clients")
                     is_server_group_updated = True
                     lcr_obj.election_done = False
-                    time.sleep(2)
+                    pending_ip_list = [server[0] for server in server_group]
+                    # print("pending ip list after update is ", pending_ip_list)
 
             else:
                 # Followers listen for leader acknowledgment or respond to client inquiries
