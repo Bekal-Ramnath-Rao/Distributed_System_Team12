@@ -1,5 +1,4 @@
 import socket
-import struct
 
 def get_machines_ip():
     udp_socket_for_ip_retrieval = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -15,6 +14,8 @@ MCAST_PORT = 1234
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
 sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 2)
+sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, 1)
+sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF, socket.inet_aton(get_machines_ip()))
 print("Sending")
 sock.sendto(bytearray("str()", "utf-8"), (MCAST_GRP, MCAST_PORT))
 
