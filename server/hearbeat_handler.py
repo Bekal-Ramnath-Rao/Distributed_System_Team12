@@ -4,7 +4,7 @@ import threading
 import ast
 
 class HeartbeatManager:
-    def __init__(self, port=12348, global_data_obj=None, filter_server_group=None, setservergroupupdatedflag = None, lcr_obj = None):
+    def __init__(self, port=12348, global_data_obj=None, filter_server_group=None, setservergroupupdatedflag = None, lcr_obj = None, leader_election = None):
         self.port = port
         self.client_list = []
         self.leader_ip = None
@@ -18,6 +18,7 @@ class HeartbeatManager:
         self.lcr_obj = lcr_obj
         self.previous_temp_client_list = []
         self.compare_counter = 0
+        self.leader_election = leader_election
 
     def broadcast(self):
         """Broadcast 'ARE YOU THERE' to all clients."""
@@ -86,6 +87,7 @@ class HeartbeatManager:
     def listen_broadcasts(self):
         """Listen for broadcast messages and respond to 'ARE YOU THERE'."""
         time.sleep(3)
+        counter = 0
         while True:
             try:
                 temp_client_list = []
@@ -103,17 +105,29 @@ class HeartbeatManager:
                             elif message.startswith("SERVER_GROUP"):
                                 for server in ast.literal_eval(message[13:]):
                                     temp_client_list.append(server[0][0])
-                                server_group_local = self.filter_server_group(temp_client_list, self.lcr_obj)
-                                for server in server_group_local:
-                                    if addr[0] == server[0][0]:
-                                        leader_info = server[0][0]
-                                server_group_local.remove(leader_info)
 
                         except socket.timeout:
                             print('timeout of the socket')
-                            self.lcr_obj.election_done = False
-                            self.filter_server_group(server_group_local, self.lcr_obj)
-                            self.setservergroupupdatedflag(True)
+                            if(counter >= 1):
+                                server_group_local = self.filter_server_group(temp_client_list.copy(), self.lcr_obj)
+                                # for server in server_group_local:
+                                #     if addr[0] == server[0][0]:
+                                #         leader_info = server[0][0]
+                                #server_group_local.remove(leader_info)
+                                self.lcr_obj.election_done = False
+                                #self.filter_server_group(server_group_local, self.lcr_obj)
+                                self.setservergroupupdatedflag(True)
+                                if(len(server_group_local) == 1):
+                                    is_leader, server_group = self.leader_election(12345,'192.168.0.255', self.lcr_obj)
+                                    self.global_flag_obj.setleaderflag(is_leader)
+                                    pass
+                                else:
+                                    # initialte elction
+                                    pass
+                                counter = 0
+                            else:
+                                counter += 1
+
             except:
                 print('Main exception')
 

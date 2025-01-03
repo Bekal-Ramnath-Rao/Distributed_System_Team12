@@ -105,7 +105,10 @@ def filter_server_group(client_list, lcr_obj):
 
     client_list.append(get_machines_ip())
     client_list = list(set(client_list))
-    pending_ip_list = list(set(pending_ip_list))
+    if getleaderstatus():	
+        pending_ip_list = list(set(pending_ip_list))
+    else:
+        pending_ip_list = []
 
     for each_ip in pending_ip_list:
         ip_count[each_ip] += 1
@@ -271,7 +274,7 @@ def udp_server(udp_port, tcp_port, is_leader_flag, lcr_obj=None, global_data=Non
                     server_group = ast.literal_eval(message[21:])
                     is_server_group_updated = True
                     print("updated server group from leader is", server_group)
-                    pending_ip_list = [server[0] for server in server_group]
+                    #pending_ip_list = [server[0] for server in server_group]
                     # update the server group here
 
         except KeyboardInterrupt:
@@ -323,6 +326,7 @@ def leader_election(udp_port, broadcast_ip, lcr_obj=None):
             return False, server_group  # This server is not the leader
     except socket.timeout:
         print("No leader found. Declaring self as leader.")
+        setleaderstatus(True)
         return True, []  # This server becomes the leader
     finally:
         udp_socket.close()
@@ -492,7 +496,7 @@ if __name__ == "__main__":
                                                    args=(udp_socket_listener_for_election, 
                                                          lcr_obj, getleaderstatus(), clientsharehandler, 
                                                          client_share, sharehandler,global_data))
-        heartbeat = hearbeat_handler.HeartbeatManager(12348, global_data, filter_server_group, setservergroupupdatedflag, lcr_obj)
+        heartbeat = hearbeat_handler.HeartbeatManager(12348, global_data, filter_server_group, setservergroupupdatedflag, lcr_obj, leader_election)
         heartbeat.run()
     else:
         udp_thread_for_election = threading.Thread(target=udp_server_managing_election,
@@ -500,7 +504,7 @@ if __name__ == "__main__":
                                                          lcr_obj, getleaderstatus(),None,None, None, global_data))
         client_share = None
         server_group = ast.literal_eval(server_group)
-        heartbeat = hearbeat_handler.HeartbeatManager(12348, global_data, filter_server_group, setservergroupupdatedflag, lcr_obj)
+        heartbeat = hearbeat_handler.HeartbeatManager(12348, global_data, filter_server_group, setservergroupupdatedflag, lcr_obj, leader_election)
         heartbeat.run()
         start_election(SERVER_UDP_PORT, BROADCAST_IP)
     
