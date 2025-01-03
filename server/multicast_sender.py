@@ -1,16 +1,23 @@
 import socket
+import struct
 
-MCAST_GRP = '224.1.1.1'
-MCAST_PORT = 5007
-# regarding socket.IP_MULTICAST_TTL
-# ---------------------------------
-# for all packets sent, after two hops on the network the packet will not 
-# be re-sent/broadcast (see https://www.tldp.org/HOWTO/Multicast-HOWTO-6.html)
-MULTICAST_TTL = 2
+def get_machines_ip():
+    udp_socket_for_ip_retrieval = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    udp_socket_for_ip_retrieval.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+    udp_socket_for_ip_retrieval.connect(
+        ("8.8.8.8", 80)
+    )  # Google's public DNS server (doesn't send actual data)
+    print("local IP is ", udp_socket_for_ip_retrieval.getsockname()[0])
+    return udp_socket_for_ip_retrieval.getsockname()[0]
+
+MCAST_GRP = '239.1.1.1'
+MCAST_PORT = 1234
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, MULTICAST_TTL)
+sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 2)
+print("Sending")
+sock.sendto(bytearray("str()", "utf-8"), (MCAST_GRP, MCAST_PORT))
 
-# For Python 3, change next line to 'sock.sendto(b"robot", ...' to avoid the
-# "bytes-like object is required" msg (https://stackoverflow.com/a/42612820)
-sock.sendto("robot", (MCAST_GRP, MCAST_PORT))
+data, address = sock.recvfrom(1024)
+print('received %s bytes from %s' % (len(data), address))
+print(data)
