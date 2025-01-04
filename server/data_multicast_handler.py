@@ -9,7 +9,7 @@ import copy
 import struct
 
 class MulticastHandler:
-    def __init__(self, global_data, clientsharehandler, sharehandler, client_share, lcr_obj, doserialization,getleaderstatus,getservergroupupdatedstatus, my_ip='0.0.0.0'):
+    def __init__(self, global_data, clientsharehandler, sharehandler, client_share, lcr_obj, doserialization,getleaderstatus,getnewserverjoined, my_ip='0.0.0.0'):
         """
         Initialize the multicast handler.
         :param multicast_group: Multicast group IP address.
@@ -32,7 +32,7 @@ class MulticastHandler:
         self.lcr_obj = lcr_obj
         self.getleaderstatus = getleaderstatus
         self.doserialization = doserialization
-        self.getservergroupupdatedstatus = getservergroupupdatedstatus
+        self.getnewserverjoined = getnewserverjoined
 
 
         # Create the UDP socket
@@ -73,19 +73,21 @@ class MulticastHandler:
     
     def deserialize_data(self, message):
         return ast.literal_eval(message)
+    
+    def changeintheobject(self):
+        if self.prev_clientsharehandler == self.clientsharehandler and self.prev_sharehandler == self.sharehandler and self.prev_client_share == self.client_share:
+            return False
 
     def multicast_main(self):
         while True:
             if self.getleaderstatus():
                 serailized_data = self.doserialization(self.clientsharehandler, self.sharehandler, self.client_share, self.lcr_obj)
-                if not(self.clientsharehandler == self.prev_clientsharehandler \
-                       and self.sharehandler == self.prev_sharehandler \
-                       and self.client_share == self.prev_client_share \
-                        or not self.getservergroupupdatedstatus()):
+                if self.changeintheobject() or self.global_data.getnewserverjoinedflag():
                     self.multicast_data_periodically(serailized_data)
                     self.prev_clientsharehandler = copy.copy(self.clientsharehandler)
                     self.prev_sharehandler = copy.copy(self.sharehandler)
                     self.prev_client_share = copy.copy(self.client_share)
+                    self.global_data.setnewserverjoinedflag(False)
                     #self.prev_lcr_obj = copy.copy(self.lcr_obj)
             else:
                 local_receivedmessage = self.receive_multicast_data()

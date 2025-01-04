@@ -23,14 +23,17 @@ class global_data_class:
     def __init__(self):
         self.global_flag = False
         self.leader_flag = False
+        self.newserverjoined = False
     def getleaderflag(self):
         return self.leader_flag
     def setleaderflag(self,value):
         self.leader_flag = value
     def setglobalflag(self,value):
         self.global_flag = value
-    def getglobalflag(self):
-        return self.global_flag
+    def getnewserverjoinedflag(self):
+        return self.newserverjoined
+    def setnewserverjoinedflag(self, value):
+        self.newserverjoined = value
     
 def setservergroupupdatedflag(flag):
     global is_server_group_updated
@@ -51,7 +54,7 @@ neighbor_sockets = []  # List of active neighbor connections
 clientobjectflag = False
 COLLECTION_THREAD_IS = []
 pending_ip_list = []
-
+newserverjoined = False
 import threading
 import time
 
@@ -83,10 +86,6 @@ def setleaderstatus(status):
 def getleaderstatus():
     global IS_LEADER
     return IS_LEADER
-
-def getservergroupupdatedstatus():
-    global is_server_group_updated
-    return  is_server_group_updated
 
 def filter_server_group(client_list, lcr_obj):
     global	server_group, pending_ip_list
@@ -265,6 +264,7 @@ def udp_server(udp_port, tcp_port, is_leader_flag, lcr_obj=None, global_data=Non
                     )
                     print(f"Sent server group to ALL clients")
                     is_server_group_updated = True
+                    global_data.setnewserverjoinedflag(True)
                     lcr_obj.election_done = False
                     pending_ip_list = [server[0] for server in server_group]
                     # print("pending ip list after update is ", pending_ip_list)
@@ -389,7 +389,7 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehand
             lcr_obj.form_members(server_group)
             lcr_obj.form_ring()
             lcr_obj.neighbour = lcr_obj.get_neighbour()[0]
-            #is_server_group_updated = False
+            is_server_group_updated = False
             lcr_obj.election_done = False
             FIRST_TIME = False
             if i_initiated_election and not getleaderstatus():
@@ -504,7 +504,7 @@ if __name__ == "__main__":
                                                          client_share, sharehandler,global_data))
         heartbeat = hearbeat_handler.HeartbeatManager(12348, global_data, filter_server_group, setservergroupupdatedflag, lcr_obj, leader_election)
         heartbeat.run()
-        multicaster = data_multicast_handler.MulticastHandler(global_data, clientsharehandler, sharehandler, client_share, lcr_obj, do_serialization,getleaderstatus,getservergroupupdatedstatus, get_machines_ip())
+        multicaster = data_multicast_handler.MulticastHandler(global_data, clientsharehandler, sharehandler, client_share, lcr_obj, do_serialization,getleaderstatus,get_machines_ip())
         multicaster.run()
     else:
         udp_thread_for_election = threading.Thread(target=udp_server_managing_election,
@@ -515,7 +515,7 @@ if __name__ == "__main__":
         heartbeat = hearbeat_handler.HeartbeatManager(12348, global_data, filter_server_group, setservergroupupdatedflag, lcr_obj, leader_election)
         heartbeat.run()
         start_election(SERVER_UDP_PORT, BROADCAST_IP)
-        multicaster = data_multicast_handler.MulticastHandler(global_data, None, None, None, lcr_obj, do_serialization,getleaderstatus,getservergroupupdatedstatus, get_machines_ip())
+        multicaster = data_multicast_handler.MulticastHandler(global_data, None, None, None, lcr_obj, do_serialization,s,get_machines_ip())
         multicaster.run()
     
     lcr_obj.create_IP_UID_mapping(get_machines_ip(), str(lcr_obj.uid))
