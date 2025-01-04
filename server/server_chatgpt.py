@@ -11,6 +11,7 @@ import json
 import pickle
 import ctypes
 import hearbeat_handler
+import data_multicast_handler
 
 from collections import defaultdict
 
@@ -355,6 +356,21 @@ def server_reinitialise_UDPbuffer(udp_socket):
     udp_socket.bind(("", 12347))  # Listen on all interfaces
     return udp_socket
 
+def do_serialization(clientsharehandler, sharehandler, client_share, lcr_obj):
+    """
+    Serialize multiple objects into a single binary blob.
+    :param objects: Objects to serialize.
+    :return: Serialized binary data.
+    """
+    # maybe globalize the objects? also initiate them at the beginning with None
+    serialized_data = []
+    serialized_data.append(json.dumps(clientsharehandler, cls=share_handler.ClientShareHandlerEncoder))
+    serialized_data.append(json.dumps(sharehandler, cls=share_handler.shareHandlerEncoder))
+    serialized_data.append(json.dumps(client_share, cls=managingRequestfromClientEncoder))
+    serialized_data.append(json.dumps(lcr_obj.IP_UID_mapping))
+    serialized_data.append(json.dumps(lcr_obj.UID_IP_mapping))
+    return serialized_data.copy()
+
 def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehandler = None, client_share = None, sharehandler = None, globaldata= None):
 
     global is_server_group_updated, i_initiated_election, server_group, LEADER_HOST, LEADER_TCP_PORT
@@ -390,16 +406,8 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehand
             # This exception occurs when the buffer is empty
                 if latest_message is not None:
                     print("\nBuffer is empty. Processing the latest message:")
-                    # print(f"Latest Message: {latest_message}")
-                    # Process the latest message here
                     lcr_obj.process_received_message(latest_message)
                     latest_message = None  # Reset after processing
-
-            # data, addr = lcr_obj.udp_socket.recvfrom(4096)  # Buffer size of 1024 bytes
-            # print(
-                # f"Received message from neighbour: {data.decode().strip()} from {addr}"
-            # )
-            # lcr_obj.process_received_message(data)
 
         elif not FIRST_TIME and lcr_obj.election_done:
             if lcr_obj.get_leader_status():
@@ -415,8 +423,6 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehand
                         # This exception occurs when the buffer is empty
                         if latest_message is not None:
                             print("\nBuffer is empty. Processing the latest message:")
-                            # print(f"Latest Message: {latest_message}")
-                            # Process the latest message here
                             deserialized_object = latest_message.decode()
                             deserialized_object_list  = ast.literal_eval(deserialized_object)
                             list_of_dicts = [json.loads(item) for item in deserialized_object_list]
@@ -439,13 +445,8 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehand
 
             else:
                 if getleaderstatus():
-                    list_of_objects = []
-                    list_of_objects.append(json.dumps(clientsharehandler, cls=share_handler.ClientShareHandlerEncoder))
-                    list_of_objects.append(json.dumps(sharehandler, cls=share_handler.shareHandlerEncoder))
-                    list_of_objects.append(json.dumps(client_share, cls=managingRequestfromClientEncoder))
-                    list_of_objects.append(json.dumps(lcr_obj.IP_UID_mapping))
-                    list_of_objects.append(json.dumps(lcr_obj.UID_IP_mapping))
-                    udp_socket.sendto(json.dumps(list_of_objects).encode(),(lcr_obj.UID_IP_mapping[lcr_obj.leader_uid], 12347))
+                    serialized_objects = do_serialization(clientsharehandler, sharehandler, client_share, lcr_obj)
+                    udp_socket.sendto(json.dumps(serialized_objects).encode(),(lcr_obj.UID_IP_mapping[lcr_obj.leader_uid], 12347))
                     MY_HOST = socket.gethostname()
                     MY_IP = socket.gethostbyname(MY_HOST)
                     LEADER_HOST = MY_IP
@@ -498,6 +499,8 @@ if __name__ == "__main__":
                                                          client_share, sharehandler,global_data))
         heartbeat = hearbeat_handler.HeartbeatManager(12348, global_data, filter_server_group, setservergroupupdatedflag, lcr_obj, leader_election)
         heartbeat.run()
+        multicaster = data_multicast_handler.MulticastHandler(global_data,lcr_obj, my_ip=get_machines_ip())
+        multicaster.run()
     else:
         udp_thread_for_election = threading.Thread(target=udp_server_managing_election,
                                                    args=(udp_socket_listener_for_election,
@@ -507,6 +510,8 @@ if __name__ == "__main__":
         heartbeat = hearbeat_handler.HeartbeatManager(12348, global_data, filter_server_group, setservergroupupdatedflag, lcr_obj, leader_election)
         heartbeat.run()
         start_election(SERVER_UDP_PORT, BROADCAST_IP)
+        multicaster = data_multicast_handler.MulticastHandler(global_data,lcr_obj, my_ip=get_machines_ip())
+        multicaster.run()
     
     lcr_obj.create_IP_UID_mapping(get_machines_ip(), str(lcr_obj.uid))
 
