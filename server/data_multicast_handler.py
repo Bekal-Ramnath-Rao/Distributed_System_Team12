@@ -8,7 +8,7 @@ from managing_request import managingRequestfromClient
 import copy
 
 class MulticastHandler:
-    def __init__(self, global_data, clientsharehandler, sharehandler, client_share, lcr_obj, doserialization,getleaderstatus, my_ip='0.0.0.0'):
+    def __init__(self, global_data, clientsharehandler, sharehandler, client_share, lcr_obj, doserialization,getleaderstatus,getservergroupupdatedstatus, my_ip='0.0.0.0'):
         """
         Initialize the multicast handler.
         :param multicast_group: Multicast group IP address.
@@ -31,6 +31,7 @@ class MulticastHandler:
         self.lcr_obj = lcr_obj
         self.getleaderstatus = getleaderstatus
         self.doserialization = doserialization
+        self.getservergroupupdatedstatus = getservergroupupdatedstatus
 
 
         # Create the UDP socket
@@ -75,7 +76,8 @@ class MulticastHandler:
                 serailized_data = self.doserialization(self.clientsharehandler, self.sharehandler, self.client_share, self.lcr_obj)
                 if not(self.clientsharehandler == self.prev_clientsharehandler \
                        and self.sharehandler == self.prev_sharehandler \
-                       and self.client_share == self.prev_client_share):
+                       and self.client_share == self.prev_client_share \
+                        or not self.getservergroupupdatedstatus()):
                     self.multicast_data_periodically(serailized_data)
                     self.prev_clientsharehandler = copy.copy(self.clientsharehandler)
                     self.prev_sharehandler = copy.copy(self.sharehandler)
