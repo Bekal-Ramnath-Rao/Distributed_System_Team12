@@ -80,13 +80,13 @@ class MulticastHandler:
     def multicast_main(self):
         while True:
             if self.getleaderstatus():
-                serailized_data = self.doserialization(self.clientsharehandler, self.sharehandler, self.client_share, self.lcr_obj)
-                if self.changeintheobject() or self.global_data.getnewserverjoinedflag():
-                    self.multicast_data_periodically(serailized_data)
-                    self.prev_clientsharehandler = copy.copy(self.clientsharehandler)
-                    self.prev_sharehandler = copy.copy(self.sharehandler)
-                    self.prev_client_share = copy.copy(self.client_share)
-                    self.global_data.setnewserverjoinedflag(False)
+                    if self.changeintheobject() or self.lcr_obj.is_a_pariticipant:
+                        serailized_data = self.doserialization(self.clientsharehandler, self.sharehandler, self.client_share, self.lcr_obj)
+                        self.multicast_data_periodically(serailized_data)
+                        self.prev_clientsharehandler = copy.copy(self.clientsharehandler)
+                        self.prev_sharehandler = copy.copy(self.sharehandler)
+                        self.prev_client_share = copy.copy(self.client_share)
+                        self.global_data.setnewserverjoinedflag(False)
                     #self.prev_lcr_obj = copy.copy(self.lcr_obj)
             else:
                 local_receivedmessage = self.receive_multicast_data()
