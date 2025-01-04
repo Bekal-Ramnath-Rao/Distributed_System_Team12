@@ -62,6 +62,13 @@ class managingRequestfromClient:
         instance = cls(data["sharehandler"], data["clientsharehandler"], data["name_of_the_client"])
         return instance
     
+    def __eq__(self, other):
+        if isinstance(other, managingRequestfromClient):
+            return self.sharehandler == other.sharehandler \
+               and self.clientsharehandler == other.clientsharehandler \
+               and self.name_of_the_client == other.name_of_the_client
+        return False
+    
 # Custom JSON Encoder
 class managingRequestfromClientEncoder(json.JSONEncoder):
     def default(self, obj):

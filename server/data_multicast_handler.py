@@ -5,6 +5,7 @@ import ast
 import json
 from share_handler import share_handler
 from managing_request import managingRequestfromClient
+import copy
 
 class MulticastHandler:
     def __init__(self, global_data, clientsharehandler, sharehandler, client_share, lcr_obj, doserialization,getleaderstatus, my_ip='0.0.0.0'):
@@ -23,6 +24,10 @@ class MulticastHandler:
         self.clientsharehandler = clientsharehandler
         self.sharehandler = sharehandler
         self.client_share = client_share
+        self.lcr_obj = lcr_obj
+        self.prev_clientsharehandler = None
+        self.prev_sharehandler = None
+        self.prev_client_share = None
         self.lcr_obj = lcr_obj
         self.getleaderstatus = getleaderstatus
         self.doserialization = doserialization
@@ -68,7 +73,14 @@ class MulticastHandler:
         while True:
             if self.getleaderstatus():
                 serailized_data = self.doserialization(self.clientsharehandler, self.sharehandler, self.client_share, self.lcr_obj)
-                self.multicast_data_periodically(serailized_data)
+                if not(self.clientsharehandler == self.prev_clientsharehandler \
+                       and self.sharehandler == self.prev_sharehandler \
+                       and self.client_share == self.prev_client_share):
+                    self.multicast_data_periodically(serailized_data)
+                    self.prev_clientsharehandler = copy.copy(self.clientsharehandler)
+                    self.prev_sharehandler = copy.copy(self.sharehandler)
+                    self.prev_client_share = copy.copy(self.client_share)
+                    #self.prev_lcr_obj = copy.copy(self.lcr_obj)
             else:
                 local_receivedmessage = self.receive_multicast_data()
                 deserialized_message = self.deserialize_data(local_receivedmessage)

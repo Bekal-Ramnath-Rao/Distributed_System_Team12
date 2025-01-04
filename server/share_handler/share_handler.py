@@ -30,6 +30,11 @@ class share:
         instance = cls(data["name"], data["number_of_shares"])
         return instance
 
+    def __eq__(self, other):
+        if isinstance(other, share):
+            return self.name == other.name and self.number_of_shares == other.number_of_shares
+        return False
+
 # Custom JSON Encoder
 class shareEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -104,6 +109,11 @@ class share_handler:
         """Create an object from a dictionary."""
         instance = cls(data["share_A"], data["share_B"])
         return instance
+    
+    def __eq__(self, other):
+        if isinstance(other, share_handler):
+            return self.share_A == other.share_A and self.share_B == other.share_B
+        return False
 
 # Custom JSON Encoder
 class shareHandlerEncoder(json.JSONEncoder):
@@ -154,6 +164,13 @@ class clientshare_handler:
         instance = cls(data["number_of_shareA"], data["number_of_shareB"], list(data["client_data"].keys())[0])
         instance.client_data = data["client_data"]
         return instance
+    
+    def __eq__(self, other):
+        if isinstance(other, clientshare_handler):
+            return    self.number_of_shareA == other.number_of_shareA \
+                  and self.number_of_shareB == other.number_of_shareB \
+                  and self.client_data == other.client_data
+        return False
 
 
 # Custom JSON Encoder
