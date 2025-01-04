@@ -9,7 +9,7 @@ import copy
 import struct
 
 class MulticastHandler:
-    def __init__(self, global_data, clientsharehandler, sharehandler, client_share, lcr_obj, doserialization,getleaderstatus,getnewserverjoined, my_ip='0.0.0.0'):
+    def __init__(self, global_data, clientsharehandler, sharehandler, client_share, lcr_obj, doserialization,getleaderstatus, my_ip='0.0.0.0'):
         """
         Initialize the multicast handler.
         :param multicast_group: Multicast group IP address.
@@ -32,7 +32,6 @@ class MulticastHandler:
         self.lcr_obj = lcr_obj
         self.getleaderstatus = getleaderstatus
         self.doserialization = doserialization
-        self.getnewserverjoined = getnewserverjoined
 
 
         # Create the UDP socket
