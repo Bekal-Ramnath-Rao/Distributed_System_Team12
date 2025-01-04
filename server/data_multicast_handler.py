@@ -6,6 +6,7 @@ import json
 from share_handler import share_handler
 from managing_request import managingRequestfromClient
 import copy
+import struct
 
 class MulticastHandler:
     def __init__(self, global_data, clientsharehandler, sharehandler, client_share, lcr_obj, doserialization,getleaderstatus,getservergroupupdatedstatus, my_ip='0.0.0.0'):
@@ -40,6 +41,9 @@ class MulticastHandler:
         self.multicast_socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, 1)
         self.multicast_socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF, socket.inet_aton(self.my_ip))
         self.multicast_socket.bind(("", self.port))
+        mreq = struct.pack("4s4s", socket.inet_aton(self.multicast_group), socket.inet_aton(self.my_ip))
+        self.multicast_socket.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+
 
 
     def serialize_objects(self, *objects):
@@ -93,6 +97,7 @@ class MulticastHandler:
                 self.client_share = managingRequestfromClient(self.sharehandler, self.clientsharehandler, 'FOLLOWER')
                 self.lcr_obj.IP_UID_mapping = list_of_dicts[3]
                 self.lcr_obj.UID_IP_mapping = list_of_dicts[4]
+                print("MULTICAST DATA RECEIVED")
     
     def run(self):
         """Run the server threads."""
