@@ -16,6 +16,8 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
 sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 2)
 sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, 1)
 sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF, socket.inet_aton(get_machines_ip()))
+server_address = ("", 1234)
+sock.bind(server_address)
 print("Sending")
 sock.sendto(bytearray("str()", "utf-8"), (MCAST_GRP, MCAST_PORT))
 
