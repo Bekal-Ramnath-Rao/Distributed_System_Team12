@@ -73,7 +73,7 @@ class MulticastHandler:
         data = None
         while (time.time() - start_time) < 1:
             try:
-                data, addr = self.multicast_socket.recvfrom(1024)
+                data, addr = self.multicast_socket.recvfrom(4096)
             except BlockingIOError:
                 # print("BlockingIOError data not received")
                 pass
