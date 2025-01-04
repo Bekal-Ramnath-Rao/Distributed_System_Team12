@@ -12,6 +12,7 @@ import pickle
 import ctypes
 import hearbeat_handler
 import data_multicast_handler
+import data_multicast_handler
 
 from collections import defaultdict
 
@@ -499,7 +500,7 @@ if __name__ == "__main__":
                                                          client_share, sharehandler,global_data))
         heartbeat = hearbeat_handler.HeartbeatManager(12348, global_data, filter_server_group, setservergroupupdatedflag, lcr_obj, leader_election)
         heartbeat.run()
-        multicaster = data_multicast_handler.MulticastHandler(global_data,lcr_obj, my_ip=get_machines_ip())
+        multicaster = data_multicast_handler.MulticastHandler(global_data, clientsharehandler, sharehandler, client_share, lcr_obj, do_serialization,getleaderstatus, get_machines_ip())
         multicaster.run()
     else:
         udp_thread_for_election = threading.Thread(target=udp_server_managing_election,
@@ -510,7 +511,7 @@ if __name__ == "__main__":
         heartbeat = hearbeat_handler.HeartbeatManager(12348, global_data, filter_server_group, setservergroupupdatedflag, lcr_obj, leader_election)
         heartbeat.run()
         start_election(SERVER_UDP_PORT, BROADCAST_IP)
-        multicaster = data_multicast_handler.MulticastHandler(global_data,lcr_obj, my_ip=get_machines_ip())
+        multicaster = data_multicast_handler.MulticastHandler(global_data, clientsharehandler, sharehandler, client_share, lcr_obj, do_serialization,getleaderstatus, get_machines_ip())
         multicaster.run()
     
     lcr_obj.create_IP_UID_mapping(get_machines_ip(), str(lcr_obj.uid))

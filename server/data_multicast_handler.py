@@ -1,8 +1,13 @@
 import socket
 import threading
+import pickle
+import ast
+import json
+from share_handler import share_handler
+from managing_request import managingRequestfromClient
 
 class MulticastHandler:
-    def __init__(self, global_data, lcr_obj, my_ip='0.0.0.0'):
+    def __init__(self, global_data, clientsharehandler, sharehandler, client_share, lcr_obj, doserialization,getleaderstatus, my_ip='0.0.0.0'):
         """
         Initialize the multicast handler.
         :param multicast_group: Multicast group IP address.
@@ -15,12 +20,20 @@ class MulticastHandler:
         self.multicast_group = '239.1.1.1'
         self.port = 1234
         self.my_ip = my_ip
+        self.clientsharehandler = clientsharehandler
+        self.sharehandler = sharehandler
+        self.client_share = client_share
+        self.lcr_obj = lcr_obj
+        self.getleaderstatus = getleaderstatus
+        self.doserialization = doserialization
+
 
         # Create the UDP socket
-        self.multicast_socket.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-        self.multicast_socket.sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 2)
-        self.multicast_socket.sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, 1)
-        self.multicast_socket.sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF, socket.inet_aton(self.my_ip))
+        self.multicast_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+        self.multicast_socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 2)
+        self.multicast_socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, 1)
+        self.multicast_socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF, socket.inet_aton(self.my_ip))
+        self.multicast_socket.bind(("", self.port))
 
 
     def serialize_objects(self, *objects):
@@ -31,12 +44,12 @@ class MulticastHandler:
         """
         return pickle.dumps(objects)
 
-    def multicast(self, serialized_data):
+    def multicast_data_periodically(self, serialized_data):
         """
         Send serialized data to the multicast group.
         :param serialized_data: Binary data to send.
         """
-        self.sock.sendto(serialized_data, (self.multicast_group, self.port))
+        self.multicast_socket.sendto(json.dumps(serialized_data).encode(), (self.multicast_group, self.port))
         print(f"Data sent to multicast group {self.multicast_group}:{self.port}")
 
     def receive_multicast_data(self):
@@ -44,38 +57,30 @@ class MulticastHandler:
         Receive serialized data from the multicast group and deserialize it.
         :return: Deserialized objects.
         """
-        data, address = self.sock.recvfrom(65536)  # Buffer size for UDP packets
+        data, address = self.multicast_socket.recvfrom(65536)  # Buffer size for UDP packets
         print(f"Data received from {address}")
-        return pickle.loads(data)
+        return data.decode()
     
+    def deserialize_data(self, message):
+        return ast.literal_eval(message)
+
     def multicast_main(self):
-        if leader_flag:
-            get_latest_data()
-            sertilize data()  using do_serialization(), but here just function call should take place
-            because passing them here again is not good as the data belongs to main class  
-            even for do_serialization, remove the parameter passed
-                if global, then no need to pass parameters
-            multicast_data_periodically()
-        else:
-            receive_data_peridically()
-            deserialize_data()
-            update_data()
+        while True:
+            if self.getleaderstatus():
+                serailized_data = self.doserialization(self.clientsharehandler, self.sharehandler, self.client_share, self.lcr_obj)
+                self.multicast_data_periodically(serailized_data)
+            else:
+                local_receivedmessage = self.receive_multicast_data()
+                deserialized_message = self.deserialize_data(local_receivedmessage)
+                list_of_dicts = [json.loads(item) for item in deserialized_message]
+                self.clientsharehandler = share_handler.clientshare_handler.from_dict(list_of_dicts[0])
+                self.sharehandler = share_handler.share_handler.from_dict(list_of_dicts[1])
+                # client_share = managingRequestfromClient.from_dict(list_of_dicts[2])
+                self.client_share = managingRequestfromClient(self.sharehandler, self.clientsharehandler, 'FOLLOWER')
+                self.lcr_obj.IP_UID_mapping = list_of_dicts[3]
+                self.lcr_obj.UID_IP_mapping = list_of_dicts[4]
     
     def run(self):
         """Run the server threads."""
         threading.Thread(target=self.multicast_main, daemon=True).start()
         # threading.Thread(target=self.listen_broadcasts, daemon=True).start()
-
-# Usage Example
-if __name__ == "__main__":
-    handler = MulticastHandler(local_interface='192.168.0.100')  # Replace with your actual local IP
-
-    # Serialize objects
-    serialized_data = handler.serialize_objects({"name": "Monkey"}, [1, 2, 3], "Test", 42)
-
-    # Send serialized data
-    handler.send(serialized_data)
-
-    # Receive and deserialize data
-    received_objects = handler.receive()
-    print("Deserialized Objects:", received_objects)
