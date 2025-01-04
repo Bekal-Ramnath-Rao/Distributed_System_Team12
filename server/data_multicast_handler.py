@@ -20,7 +20,7 @@ class MulticastHandler:
         self.global_data = global_data
         self.lcr_obj = lcr_obj
         self.multicast_group = '239.1.1.1'
-        self.port = 1234
+        self.port = 12349
         self.my_ip = my_ip
         self.clientsharehandler = clientsharehandler
         self.sharehandler = sharehandler
@@ -66,9 +66,14 @@ class MulticastHandler:
         Receive serialized data from the multicast group and deserialize it.
         :return: Deserialized objects.
         """
+        # self.multicast_socket.settimeout(2)  # Timeout for recvfrom() in seconds
+        # try:
         data, address = self.multicast_socket.recvfrom(65536)  # Buffer size for UDP packets
-        print(f"Data received from {address}")
         return data.decode()
+        # except socket.timeout:
+        #     print('No multicast data received')
+        #     return 'NO_DATA'
+
     
     def deserialize_data(self, message):
         return ast.literal_eval(message)
@@ -80,7 +85,7 @@ class MulticastHandler:
     def multicast_main(self):
         while True:
             if self.getleaderstatus():
-                    if self.changeintheobject() or self.lcr_obj.is_a_pariticipant:
+                    if self.changeintheobject() or self.lcr_obj.is_a_pariticipant or self.global_data.getnewserverjoinedflag():
                         serailized_data = self.doserialization(self.clientsharehandler, self.sharehandler, self.client_share, self.lcr_obj)
                         self.multicast_data_periodically(serailized_data)
                         self.prev_clientsharehandler = copy.copy(self.clientsharehandler)
@@ -90,6 +95,8 @@ class MulticastHandler:
                     #self.prev_lcr_obj = copy.copy(self.lcr_obj)
             else:
                 local_receivedmessage = self.receive_multicast_data()
+                if local_receivedmessage == 'NO_DATA':
+                    continue
                 deserialized_message = self.deserialize_data(local_receivedmessage)
                 list_of_dicts = [json.loads(item) for item in deserialized_message]
                 self.clientsharehandler = share_handler.clientshare_handler.from_dict(list_of_dicts[0])
