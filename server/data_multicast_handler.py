@@ -7,7 +7,7 @@ from share_handler import share_handler
 from managing_request import managingRequestfromClient
 import copy
 import struct
-
+import time 
 class MulticastHandler:
     def __init__(self, global_data, clientsharehandler, sharehandler, client_share, lcr_obj, doserialization,getleaderstatus, my_ip='0.0.0.0'):
         """
@@ -40,6 +40,7 @@ class MulticastHandler:
         self.multicast_socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, 1)
         self.multicast_socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF, socket.inet_aton(self.my_ip))
         self.multicast_socket.bind(("", self.port))
+        self.multicast_socket.setblocking(False)
         mreq = struct.pack("4s4s", socket.inet_aton(self.multicast_group), socket.inet_aton(self.my_ip))
         self.multicast_socket.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
 
@@ -68,8 +69,18 @@ class MulticastHandler:
         """
         # self.multicast_socket.settimeout(2)  # Timeout for recvfrom() in seconds
         # try:
-        data, address = self.multicast_socket.recvfrom(65536)  # Buffer size for UDP packets
-        return data.decode()
+        start_time = time.time()
+        data = None
+        while (time.time() - start_time) < 1:
+            try:
+                data, addr = self.multicast_socket.recvfrom(1024)
+            except BlockingIOError:
+                # print("BlockingIOError data not received")
+                pass
+        if data:
+            return data.decode()
+        else:
+            return 'NO_DATA'
         # except socket.timeout:
         #     print('No multicast data received')
         #     return 'NO_DATA'
