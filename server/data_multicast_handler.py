@@ -113,7 +113,9 @@ class MulticastHandler:
                     continue
                 deserialized_message = self.deserialize_data(local_receivedmessage)
                 list_of_dicts = [json.loads(item) for item in deserialized_message]
+                print("before ", self.clientsharehandler.number_of_shareA)
                 self.clientsharehandler = share_handler.clientshare_handler.from_dict(list_of_dicts[0])
+                print("after ",self.clientsharehandler.number_of_shareA)
                 self.sharehandler = share_handler.share_handler.from_dict(list_of_dicts[1])
                 # client_share = managingRequestfromClient.from_dict(list_of_dicts[2])
                 self.client_share = managingRequestfromClient(self.sharehandler, self.clientsharehandler, 'FOLLOWER')
