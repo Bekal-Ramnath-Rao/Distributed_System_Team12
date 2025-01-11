@@ -1,6 +1,7 @@
 import socket
 import time
-
+error_flag = False
+pending_message = ''
 def tcp_client(server_ip, tcp_port):
     """Continue TCP communication with the leader server."""
     tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -11,6 +12,13 @@ def tcp_client(server_ip, tcp_port):
 
     try:
         while True:
+            global pending_message
+            if pending_message != '':
+                tcp_socket.send(pending_message.encode())
+                pending_message = ''
+                server_response = tcp_socket.recv(1024).decode()
+                print(f"Received response from server: {server_response}")
+
             client_message = input("Enter message to send to the server (type 'exit' to quit): ")
             tcp_socket.send(client_message.encode())
 
@@ -27,9 +35,13 @@ def tcp_client(server_ip, tcp_port):
 
     except Exception as e:
         print(f"Error during TCP communication: {e}")
+        error_flag = True
+        pending_message = client_message
+        print(pending_message)
     finally:
         tcp_socket.close()
         print("TCP connection closed.")
+        return error_flag
 
 def udp_client(broadcast_ip, udp_port):
     """Discover the leader server via UDP broadcast."""
@@ -52,7 +64,7 @@ def udp_client(broadcast_ip, udp_port):
             leader_port = int(response_message.split()[1])
             print(f"Leader identified at {server_address[0]}:{leader_port}")
             udp_socket.close()
-            tcp_client(server_address[0], leader_port)
+            return tcp_client(server_address[0], leader_port)
         else:
             print("Unexpected response. Could not find the leader.")
             udp_socket.close()
@@ -64,6 +76,11 @@ def udp_client(broadcast_ip, udp_port):
 if __name__ == '__main__':
     BROADCAST_IP = '192.168.0.255'
     UDP_PORT = 12345
-
     time.sleep(1)
-    udp_client(BROADCAST_IP, UDP_PORT)
+    error_flag = udp_client(BROADCAST_IP, UDP_PORT)
+
+    while error_flag == True:
+        error_flag = False
+        error_flag = udp_client(BROADCAST_IP, UDP_PORT)
+    
+    print('Client finished')
