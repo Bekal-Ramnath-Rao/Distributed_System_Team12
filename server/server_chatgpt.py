@@ -55,6 +55,7 @@ clientobjectflag = False
 COLLECTION_THREAD_IS = []
 pending_ip_list = []
 newserverjoined = False
+tcp_connection_list=[]
 import threading
 import time
 
@@ -183,22 +184,27 @@ def handle_client(conn, client_address,client_share = None, global_data=None):
 
 def tcp_server(tcp_port, is_leader, client_share, global_data=None):
     """Handle multiple clients via TCP."""
-
+    global tcp_connection_list
     tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     tcp_socket.bind(("0.0.0.0", tcp_port))  # Bind to all interfaces
     tcp_socket.listen(5)  # Allow up to 5 clients to queue for connections
     print(f"Leader server is listening on TCP port {tcp_port}...")
-
+   
     try:
         while True:
             if getleaderstatus():
                 if getclientshareobject() is not None:
                     conn, client_address = tcp_socket.accept()
+                    tcp_connection_list.append(conn)
                     client_thread = threading.Thread(
                         target=handle_client, args=(conn, client_address, getclientshareobject(), global_data)
                     )
                     client_thread.start()
                     print(f"Started thread for client {client_address}")
+            # elif tcp_connection_list is not None:
+            #     for conn in tcp_connection_list:
+            #         conn.close()
+            #     tcp_connection_list = []
 
 
     except KeyboardInterrupt:
@@ -378,7 +384,7 @@ def do_serialization(clientsharehandler, sharehandler, client_share, lcr_obj):
 
 def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehandler = None, client_share = None, sharehandler = None, globaldata= None):
 
-    global is_server_group_updated, i_initiated_election, server_group, LEADER_HOST, LEADER_TCP_PORT
+    global is_server_group_updated, i_initiated_election, server_group, LEADER_HOST, LEADER_TCP_PORT, tcp_connection_list
     print("inside election thread")
     FIRST_TIME = True
     latest_message = None
@@ -460,6 +466,10 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehand
                     lcr_obj.election_done = False
                     lcr_obj.is_leader=False
                     FIRST_TIME = True
+                    print("tcp_connection_list", tcp_connection_list)
+                    for conn in tcp_connection_list:
+                        conn.close()
+
 
 
 
