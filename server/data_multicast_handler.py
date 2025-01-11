@@ -90,8 +90,11 @@ class MulticastHandler:
         return ast.literal_eval(message)
     
     def changeintheobject(self):
-        if self.prev_clientsharehandler == self.clientsharehandler or self.prev_sharehandler == self.sharehandler or self.prev_client_share == self.client_share:
+        # print("RESULT is ", self.prev_sharehandler == self.sharehandler)
+        if self.prev_sharehandler == self.sharehandler:
             return False
+        else:
+            return True
 
     def multicast_main(self):
         while True:
@@ -99,9 +102,9 @@ class MulticastHandler:
                     if self.changeintheobject() or self.lcr_obj.is_a_pariticipant or self.global_data.getnewserverjoinedflag():
                         serailized_data = self.doserialization(self.clientsharehandler, self.sharehandler, self.client_share, self.lcr_obj)
                         self.multicast_data_periodically(serailized_data)
-                        self.prev_clientsharehandler = copy.copy(self.clientsharehandler)
-                        self.prev_sharehandler = copy.copy(self.sharehandler)
-                        self.prev_client_share = copy.copy(self.client_share)
+                        self.prev_clientsharehandler = copy.deepcopy(self.clientsharehandler)
+                        self.prev_sharehandler = copy.deepcopy(self.sharehandler)
+                        self.prev_client_share = copy.deepcopy(self.client_share)
                         self.global_data.setnewserverjoinedflag(False)
                     #self.prev_lcr_obj = copy.copy(self.lcr_obj)
             else:
