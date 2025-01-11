@@ -43,6 +43,9 @@ class HeartbeatManager:
                     if data.decode() == "I AM THERE": 
                         self.temp_client_list.append(addr[0])
                         print(f"Received response from {addr[0]}")
+                except TimeoutError:
+                    # print("BlockingIOError data not received")
+                    pass
                 except BlockingIOError:
                     # print("BlockingIOError data not received")
                     pass
