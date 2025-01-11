@@ -188,17 +188,22 @@ def tcp_server(tcp_port, is_leader, client_share, global_data=None):
     tcp_socket.bind(("0.0.0.0", tcp_port))  # Bind to all interfaces
     tcp_socket.listen(5)  # Allow up to 5 clients to queue for connections
     print(f"Leader server is listening on TCP port {tcp_port}...")
-
+    tcp_connection_list = []
     try:
         while True:
             if getleaderstatus():
                 if getclientshareobject() is not None:
                     conn, client_address = tcp_socket.accept()
+                    tcp_connection_list.append(conn)
                     client_thread = threading.Thread(
                         target=handle_client, args=(conn, client_address, getclientshareobject(), global_data)
                     )
                     client_thread.start()
                     print(f"Started thread for client {client_address}")
+            elif tcp_connection_list is not None:
+                for conn in tcp_connection_list:
+                    conn.close()
+                tcp_connection_list = []
 
 
     except KeyboardInterrupt:
