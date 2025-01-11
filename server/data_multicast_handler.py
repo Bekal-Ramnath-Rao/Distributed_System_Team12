@@ -90,7 +90,7 @@ class MulticastHandler:
         return ast.literal_eval(message)
     
     def changeintheobject(self):
-        if self.prev_clientsharehandler == self.clientsharehandler and self.prev_sharehandler == self.sharehandler and self.prev_client_share == self.client_share:
+        if self.prev_clientsharehandler == self.clientsharehandler or self.prev_sharehandler == self.sharehandler or self.prev_client_share == self.client_share:
             return False
 
     def multicast_main(self):
