@@ -90,7 +90,7 @@ class MulticastHandler:
         return ast.literal_eval(message)
     
     def changeintheobject(self):
-        print("RESULT is ", self.prev_sharehandler == self.sharehandler)
+        # print("RESULT is ", self.prev_sharehandler == self.sharehandler)
         if self.prev_sharehandler == self.sharehandler:
             return False
         else:
