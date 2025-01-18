@@ -164,6 +164,7 @@ class MulticastHandler:
             print("before ", self.clientsharehandler.number_of_shareA)
         self.clientsharehandler = share_handler.clientshare_handler.from_dict(list_of_dicts[0])
         self.received_sequence_number = int(list_of_dicts[-1])
+        print("LIST OF DICTS IS ",list_of_dicts[-1])
         if self.received_sequence_number == self.expected_sequence_number:
             self.expected_sequence_number += 1
             self.sequence_number_serialized_data_dict[self.received_sequence_number] = list_of_dicts
@@ -180,11 +181,14 @@ class MulticastHandler:
                     holdback_queue_seq_number = int(elements[-1])
                     if holdback_queue_seq_number == self.expected_sequence_number:
                         self.expected_sequence_number += 1
-                        self.sequence_number_serialized_data_dict[self.received_sequence_number] = elements
+                        self.sequence_number_serialized_data_dict[self.expected_sequence_number] = elements
+                self.holdback_queue.clear()
             else:
                 unicast_message = 'I NEED ' + str(self.expected_sequence_number)
                 #request data from leader server
                 self.udp_socket.sendto(unicast_message.encode(), (addr[0],12350))
+        
+        print("END Expected sequence number is ",self.expected_sequence_number)
             
             
         
@@ -209,9 +213,9 @@ class MulticastHandler:
                         if requested_sequence_number in self.sequence_number_serialized_data_dict.keys():
                             requested_data = self.sequence_number_serialized_data_dict[requested_sequence_number]
                             self.udp_socket.sendto(json.dumps(requested_data).encode(), addr)                            
-                    if self.changeintheobject()  or self.global_data.getnewserverjoinedflag():
+                    if self.changeintheobject():
                         serailized_data = self.doserialization(self.clientsharehandler, self.sharehandler, self.client_share, self.lcr_obj)
-                        serailized_data+= str(self.sequence_number)
+                        serailized_data.append(str(self.sequence_number))
                         self.sequence_number_serialized_data_dict[self.sequence_number] = serailized_data
                         self.sequence_number += 1
                         
@@ -225,10 +229,10 @@ class MulticastHandler:
                 local_receivedmessage, addr1 = self.receive_multicast_data()
                 local_receivedunicastmessage, addr2 = self.receive_unicast_data()
                 if local_receivedmessage != 'NO_DATA' :
-                    print("addr is ", addr1)
+                    print("addr1 is ", addr1)
                     self.processthedata(local_receivedmessage, addr1)
                 elif local_receivedunicastmessage!= 'NO_DATA' :
-                    print("addr is ", addr2)
+                    print("addr2 is ", addr2)
                     self.processthedata(local_receivedunicastmessage, addr2)                    
                     # deserialized_message = self.deserialize_data(local_receivedmessage)
                     # list_of_dicts = [json.loads(item) for item in deserialized_message]
