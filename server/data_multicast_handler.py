@@ -43,6 +43,10 @@ class MulticastHandler:
         self.multicast_socket.setblocking(False)
         mreq = struct.pack("4s4s", socket.inet_aton(self.multicast_group), socket.inet_aton(self.my_ip))
         self.multicast_socket.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+        self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.udp_socket.setblocking(False)
+        self.udp_socket.bind(("", 12350))
 
         self.sequence_number = 0
         self.received_sequence_number = 0
@@ -103,14 +107,15 @@ class MulticastHandler:
         data = None
         while (time.time() - start_time) < 1:
             try:
-                data, addr = self.multicast_socket.recvfrom(4096)
+                data, addr = self.udp_socket.recvfrom(4096)
             except BlockingIOError:
                 # print("BlockingIOError data not received")
                 pass
+        print(data)
         if data:
             return int(data.decode().split(' ')[-1]), addr
         else:
-            return 'NO_DATA'
+            return 'NO_DATA', None
         # except socket.timeout:
         #     print('No multicast data received')
         #     return 'NO_DATA'
@@ -171,7 +176,7 @@ class MulticastHandler:
                                 self.holdback_queue.append(list_of_dicts)
                                 unicast_message = 'I NEED ' + str(self.expected_sequence_number)
                                 #request data from leader server
-                                self.multicast_socket.sendto(unicast_message.encode(), addr)
+                                self.udp_socket.sendto(unicast_message.encode(), (addr[0],12350))
                             elif self.received_sequence_number < self.expected_sequence_number:
                                 pass
                 elif self.received_sequence_number > self.expected_sequence_number:
