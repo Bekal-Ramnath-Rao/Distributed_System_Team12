@@ -85,14 +85,36 @@ class MulticastHandler:
                 # print("BlockingIOError data not received")
                 pass
         if data:
-            return data.decode()
+            return data.decode(), addr
         else:
             return 'NO_DATA'
         # except socket.timeout:
         #     print('No multicast data received')
         #     return 'NO_DATA'
 
-    
+    def receive_sequence_request(self):
+        """
+        Receive serialized data from the multicast group and deserialize it.
+        :return: Deserialized objects.
+        """
+        # self.multicast_socket.settimeout(2)  # Timeout for recvfrom() in seconds
+        # try:
+        start_time = time.time()
+        data = None
+        while (time.time() - start_time) < 1:
+            try:
+                data, addr = self.multicast_socket.recvfrom(4096)
+            except BlockingIOError:
+                # print("BlockingIOError data not received")
+                pass
+        if data:
+            return int(data.decode().split(' ')[-1]), addr
+        else:
+            return 'NO_DATA'
+        # except socket.timeout:
+        #     print('No multicast data received')
+        #     return 'NO_DATA'
+
     def deserialize_data(self, message):
         return ast.literal_eval(message)
     
@@ -109,9 +131,13 @@ class MulticastHandler:
     def multicast_main(self):
         while True:
             if self.getleaderstatus():
+                    requested_sequence_number, addr = self.receive_sequence_request()
+                    if requested_sequence_number != 'NO DATA':
+                        if requested_sequence_number in self.sequence_number_serialized_data_dict.keys():
+                            requested_data = self.sequence_number_serialized_data_dict[requested_sequence_number]
+                            self.multicast_socket.sendto(requested_data.encode(), addr)                            
                     if self.changeintheobject()  or self.global_data.getnewserverjoinedflag():
                         serailized_data = self.doserialization(self.clientsharehandler, self.sharehandler, self.client_share, self.lcr_obj)
-                        
                         self.sequence_number += 1
                         serailized_data+= str(self.sequence_number)
                         self.sequence_number_serialized_data_dict[self.sequence_number] = serailized_data
@@ -123,7 +149,7 @@ class MulticastHandler:
                         self.global_data.setnewserverjoinedflag(False)
                     #self.prev_lcr_obj = copy.copy(self.lcr_obj)
             else:
-                local_receivedmessage = self.receive_multicast_data()
+                local_receivedmessage, addr = self.receive_multicast_data()
                 if local_receivedmessage == 'NO_DATA':
                     continue
                 deserialized_message = self.deserialize_data(local_receivedmessage)
@@ -132,6 +158,30 @@ class MulticastHandler:
                     print("before ", self.clientsharehandler.number_of_shareA)
                 self.clientsharehandler = share_handler.clientshare_handler.from_dict(list_of_dicts[0])
                 self.received_sequence_number = int(list_of_dicts[-1])
+                if self.received_sequence_number == self.expected_sequence_number:
+                    self.expected_sequence_number += 1
+                    self.sequence_number_serialized_data_dict[self.received_sequence_number] = list_of_dicts
+                    if self.holdback_queue is not None:
+                        for elements in self.holdback_queue:
+                            self.received_sequence_number = int(elements[-1])
+                            if self.received_sequence_number == self.expected_sequence_number:
+                                self.expected_sequence_number += 1
+                                self.sequence_number_serialized_data_dict[self.received_sequence_number] = list_of_dicts
+                            elif self.received_sequence_number > self.expected_sequence_number:
+                                self.holdback_queue.append(list_of_dicts)
+                                unicast_message = 'I NEED ' + str(self.expected_sequence_number)
+                                #request data from leader server
+                                self.multicast_socket.sendto(unicast_message.encode(), addr)
+                            elif self.received_sequence_number < self.expected_sequence_number:
+                                pass
+                elif self.received_sequence_number > self.expected_sequence_number:
+                    self.holdback_queue.append(list_of_dicts)
+                    #request data from leader server
+                    unicast_message = 'I NEED ' + str(self.expected_sequence_number)
+                    #request data from leader server
+                    self.multicast_socket.sendto(unicast_message.encode(), addr)
+                elif self.received_sequence_number < self.expected_sequence_number:
+                    pass
                 print("RECEIVED SEQUENCE NUMBER ", self.received_sequence_number)
                 print("after ",self.clientsharehandler.number_of_shareA)
                 self.sharehandler = share_handler.share_handler.from_dict(list_of_dicts[1])
