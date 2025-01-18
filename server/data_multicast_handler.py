@@ -164,30 +164,30 @@ class MulticastHandler:
             print("before ", self.clientsharehandler.number_of_shareA)
         self.clientsharehandler = share_handler.clientshare_handler.from_dict(list_of_dicts[0])
         self.received_sequence_number = int(list_of_dicts[-1])
-        if self.holdback_queue is not None:
-            for elements in self.holdback_queue:
-                self.received_sequence_number = int(elements[-1])
-                if self.received_sequence_number == self.expected_sequence_number:
-                    self.expected_sequence_number += 1
-                    self.sequence_number_serialized_data_dict[self.received_sequence_number] = list_of_dicts
-                elif self.received_sequence_number > self.expected_sequence_number:
-                    #self.holdback_queue.append(list_of_dicts)
-                    unicast_message = 'I NEED ' + str(self.expected_sequence_number)
-                    #request data from leader server
-                    self.udp_socket.sendto(unicast_message.encode(), (addr[0],12350))
-                elif self.received_sequence_number < self.expected_sequence_number:
-                    self.holdback_queue.clear()
-        elif self.received_sequence_number == self.expected_sequence_number:
+        if self.received_sequence_number == self.expected_sequence_number:
             self.expected_sequence_number += 1
             self.sequence_number_serialized_data_dict[self.received_sequence_number] = list_of_dicts
         elif self.received_sequence_number > self.expected_sequence_number:
             self.holdback_queue.append(list_of_dicts)
-            #request data from leader server
             unicast_message = 'I NEED ' + str(self.expected_sequence_number)
             #request data from leader server
-            self.multicast_socket.sendto(unicast_message.encode(), (addr[0],12350))
-        elif self.received_sequence_number < self.expected_sequence_number:
-            pass
+            self.udp_socket.sendto(unicast_message.encode(), (addr[0],12350))
+        print('len of holdback queue', len(self.holdback_queue))
+        if len(self.holdback_queue)!=0:
+            holdback_queue_seq_number = self.holdback_queue[0][-1]
+            if holdback_queue_seq_number == self.expected_sequence_number:
+                for elements in self.holdback_queue:
+                    holdback_queue_seq_number = int(elements[-1])
+                    if holdback_queue_seq_number == self.expected_sequence_number:
+                        self.expected_sequence_number += 1
+                        self.sequence_number_serialized_data_dict[self.received_sequence_number] = elements
+            else:
+                unicast_message = 'I NEED ' + str(self.expected_sequence_number)
+                #request data from leader server
+                self.udp_socket.sendto(unicast_message.encode(), (addr[0],12350))
+            
+            
+        
         print("RECEIVED SEQUENCE NUMBER ", self.received_sequence_number)
         print("after ",self.clientsharehandler.number_of_shareA)
         self.sharehandler = share_handler.share_handler.from_dict(list_of_dicts[1])
@@ -196,7 +196,7 @@ class MulticastHandler:
         self.lcr_obj.IP_UID_mapping = list_of_dicts[3]
         self.lcr_obj.UID_IP_mapping = list_of_dicts[4]
         print("MULTICAST DATA RECEIVED")
-        self.expected_sequence_number += 1
+        #self.expected_sequence_number += 1
 
         print("Dictionary is ",self.sequence_number_serialized_data_dict)
 
