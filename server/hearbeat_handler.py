@@ -30,7 +30,7 @@ class HeartbeatManager:
                 # time.sleep(5)  # Wait 3 seconds before the next broadcast
                 self.listen_responses()
     
-    def is_connected_to_internet():
+    def is_connected_to_internet(self):
         try:
             # Check if we can resolve a hostname (Google's public DNS server)
             socket.create_connection(("8.8.8.8", 53), timeout=5)
