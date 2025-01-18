@@ -29,6 +29,14 @@ class HeartbeatManager:
                 print("Broadcast sent: ARE YOU THERE")
                 # time.sleep(5)  # Wait 3 seconds before the next broadcast
                 self.listen_responses()
+    
+    def is_connected_to_internet():
+        try:
+            # Check if we can resolve a hostname (Google's public DNS server)
+            socket.create_connection(("8.8.8.8", 53), timeout=5)
+            return True
+        except OSError:
+            return False
 
     def listen_responses(self):
         """Listen for responses from clients."""
@@ -111,22 +119,23 @@ class HeartbeatManager:
                         except socket.timeout:
                             print('timeout of the socket')
                             if(counter >= 1):
-                                server_group_local = self.filter_server_group(temp_client_list.copy(), self.lcr_obj)
-                                # for server in server_group_local:
-                                #     if addr[0] == server[0][0]:
-                                #         leader_info = server[0][0]
-                                #server_group_local.remove(leader_info)
-                                self.lcr_obj.election_done = False
-                                #self.filter_server_group(server_group_local, self.lcr_obj)
-                                self.setservergroupupdatedflag(True)
-                                if(len(server_group_local) == 1):
-                                    is_leader, server_group = self.leader_election(12345,'192.168.0.255', self.lcr_obj)
-                                    self.global_flag_obj.setleaderflag(is_leader)
-                                    pass
-                                else:
-                                    # initialte elction
-                                    pass
-                                counter = 0
+                                if(self.is_connected_to_internet()):
+                                    server_group_local = self.filter_server_group(temp_client_list.copy(), self.lcr_obj)
+                                    # for server in server_group_local:
+                                    #     if addr[0] == server[0][0]:
+                                    #         leader_info = server[0][0]
+                                    #server_group_local.remove(leader_info)
+                                    self.lcr_obj.election_done = False
+                                    #self.filter_server_group(server_group_local, self.lcr_obj)
+                                    self.setservergroupupdatedflag(True)
+                                    if(len(server_group_local) == 1):
+                                        is_leader, server_group = self.leader_election(12345,'192.168.0.255', self.lcr_obj)
+                                        self.global_flag_obj.setleaderflag(is_leader)
+                                        pass
+                                    else:
+                                        # initialte elction
+                                        pass
+                                    counter = 0
                             else:
                                 counter += 1
 
