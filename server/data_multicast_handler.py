@@ -185,7 +185,7 @@ class MulticastHandler:
             #request data from leader server
             unicast_message = 'I NEED ' + str(self.expected_sequence_number)
             #request data from leader server
-            self.multicast_socket.sendto(unicast_message.encode(), addr)
+            self.multicast_socket.sendto(unicast_message.encode(), (addr[0],12350))
         elif self.received_sequence_number < self.expected_sequence_number:
             pass
         print("RECEIVED SEQUENCE NUMBER ", self.received_sequence_number)
@@ -204,15 +204,15 @@ class MulticastHandler:
         while True:
             if self.getleaderstatus():
                     requested_sequence_number, addr = self.receive_sequence_request()
-                    if requested_sequence_number != 'NO DATA':
+                    if requested_sequence_number != 'NO_DATA':
                         if requested_sequence_number in self.sequence_number_serialized_data_dict.keys():
                             requested_data = self.sequence_number_serialized_data_dict[requested_sequence_number]
-                            self.multicast_socket.sendto(requested_data.encode(), addr)                            
+                            self.udp_socket.sendto(requested_data.encode(), addr)                            
                     if self.changeintheobject()  or self.global_data.getnewserverjoinedflag():
                         serailized_data = self.doserialization(self.clientsharehandler, self.sharehandler, self.client_share, self.lcr_obj)
-                        self.sequence_number += 1
                         serailized_data+= str(self.sequence_number)
                         self.sequence_number_serialized_data_dict[self.sequence_number] = serailized_data
+                        self.sequence_number += 1
                         
                         self.multicast_data_periodically(serailized_data)
                         self.prev_clientsharehandler = copy.deepcopy(self.clientsharehandler)
