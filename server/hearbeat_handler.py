@@ -61,7 +61,6 @@ class HeartbeatManager:
                 self.compare_counter += 1
             elif(self.compare_counter == 1):
                 self.previous_temp_client_list = []
-                self.compare_counter
 
         client_list = self.filter_server_group(self.temp_client_list.copy(), self.lcr_obj)
         message = f"SERVER_GROUP {client_list}"

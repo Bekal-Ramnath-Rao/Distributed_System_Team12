@@ -5,16 +5,17 @@ pending_message = ''
 def tcp_client(server_ip, tcp_port):
     """Continue TCP communication with the leader server."""
     tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
+    global pending_message, error_flag
     print(f"Connecting to leader server {server_ip} on TCP port {tcp_port}...")
     tcp_socket.connect((server_ip, tcp_port))
     print("TCP connection established with the leader server.")
 
     try:
         while True:
-            global pending_message
+            
             if pending_message != '':
                 tcp_socket.send(pending_message.encode())
+                print('sent')
                 pending_message = ''
                 server_response = tcp_socket.recv(1024).decode()
                 print(f"Received response from server: {server_response}")
@@ -37,7 +38,6 @@ def tcp_client(server_ip, tcp_port):
         print(f"Error during TCP communication: {e}")
         error_flag = True
         pending_message = client_message
-        print(pending_message)
     finally:
         tcp_socket.close()
         print("TCP connection closed.")
