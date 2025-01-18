@@ -156,7 +156,8 @@ class MulticastHandler:
     def get_sequence_number_serialized_data_dict(self, sequence_number):
         return self.sequence_number_serialized_data_dict[sequence_number]
     
-    def processthedata(self,local_receivedmessage):
+    def processthedata(self,local_receivedmessage, addr):
+        print("expected sequence number is ",self.expected_sequence_number)
         deserialized_message = self.deserialize_data(local_receivedmessage)
         list_of_dicts = [json.loads(item) for item in deserialized_message]
         if self.clientsharehandler is not None:
@@ -197,6 +198,8 @@ class MulticastHandler:
         print("MULTICAST DATA RECEIVED")
         self.expected_sequence_number += 1
 
+        print("Dictionary is ",self.sequence_number_serialized_data_dict)
+
     def multicast_main(self):
         while True:
             if self.getleaderstatus():
@@ -218,12 +221,14 @@ class MulticastHandler:
                         self.global_data.setnewserverjoinedflag(False)
                     #self.prev_lcr_obj = copy.copy(self.lcr_obj)
             else:
-                local_receivedmessage, addr = self.receive_multicast_data()
-                local_receivedunicastmessage, addr = self.receive_unicast_data()
+                local_receivedmessage, addr1 = self.receive_multicast_data()
+                local_receivedunicastmessage, addr2 = self.receive_unicast_data()
                 if local_receivedmessage != 'NO_DATA' :
-                    self.processthedata(local_receivedmessage)
+                    print("addr is ", addr1)
+                    self.processthedata(local_receivedmessage, addr1)
                 elif local_receivedunicastmessage!= 'NO_DATA' :
-                    self.processthedata(local_receivedunicastmessage)                    
+                    print("addr is ", addr2)
+                    self.processthedata(local_receivedunicastmessage, addr2)                    
                     # deserialized_message = self.deserialize_data(local_receivedmessage)
                     # list_of_dicts = [json.loads(item) for item in deserialized_message]
                     # if self.clientsharehandler is not None:
