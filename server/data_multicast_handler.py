@@ -44,6 +44,13 @@ class MulticastHandler:
         mreq = struct.pack("4s4s", socket.inet_aton(self.multicast_group), socket.inet_aton(self.my_ip))
         self.multicast_socket.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
 
+        self.sequence_number = 0
+        self.received_sequence_number = 0
+        self.expected_sequence_number = 0
+        self.sequence_number_serialized_data_dict={}
+        self.holdback_queue = []
+        self.delivery_queue = []
+
 
 
     def serialize_objects(self, *objects):
@@ -96,11 +103,19 @@ class MulticastHandler:
         else:
             return True
 
+    def get_sequence_number_serialized_data_dict(self, sequence_number):
+        return self.sequence_number_serialized_data_dict[sequence_number]
+
     def multicast_main(self):
         while True:
             if self.getleaderstatus():
-                    if self.changeintheobject() or self.lcr_obj.is_a_pariticipant or self.global_data.getnewserverjoinedflag():
+                    if self.changeintheobject()  or self.global_data.getnewserverjoinedflag():
                         serailized_data = self.doserialization(self.clientsharehandler, self.sharehandler, self.client_share, self.lcr_obj)
+                        
+                        self.sequence_number += 1
+                        serailized_data+= str(self.sequence_number)
+                        self.sequence_number_serialized_data_dict[self.sequence_number] = serailized_data
+                        
                         self.multicast_data_periodically(serailized_data)
                         self.prev_clientsharehandler = copy.deepcopy(self.clientsharehandler)
                         self.prev_sharehandler = copy.deepcopy(self.sharehandler)
@@ -116,6 +131,8 @@ class MulticastHandler:
                 if self.clientsharehandler is not None:
                     print("before ", self.clientsharehandler.number_of_shareA)
                 self.clientsharehandler = share_handler.clientshare_handler.from_dict(list_of_dicts[0])
+                self.received_sequence_number = int(list_of_dicts[-1])
+                print("RECEIVED SEQUENCE NUMBER ", self.received_sequence_number)
                 print("after ",self.clientsharehandler.number_of_shareA)
                 self.sharehandler = share_handler.share_handler.from_dict(list_of_dicts[1])
                 # client_share = managingRequestfromClient.from_dict(list_of_dicts[2])
@@ -123,6 +140,7 @@ class MulticastHandler:
                 self.lcr_obj.IP_UID_mapping = list_of_dicts[3]
                 self.lcr_obj.UID_IP_mapping = list_of_dicts[4]
                 print("MULTICAST DATA RECEIVED")
+                self.expected_sequence_number += 1
     
     def run(self):
         """Run the server threads."""
