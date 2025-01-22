@@ -39,8 +39,6 @@ def setservergroupupdatedflag(flag):
     global is_server_group_updated
     is_server_group_updated = flag
 
-    
-# global_flag = threading.Event()
 LEADER_HOST = None  # The leader's host address (dynamically updated)
 LEADER_TCP_PORT = None  # The leader's TCP port (dynamically updated)
 SERVER_UDP_PORT = 12345
@@ -100,15 +98,6 @@ def filter_server_group(client_list, lcr_obj):
     Returns:
         list of tuples: Filtered server group list where only tuples with matching IP addresses remain.
     """
-    # pending_ip_list = ["192.168.0.1"]
-    # temp_list = ["192.168.0.2"]
-    # print("before pending ip list is ", pending_ip_list)
-    # print("client list after ", client_list)
-    
-    # print("after pending ip list is  ", pending_ip_list)
-    # print("client list before ", client_list)
-    # print("pending ip list is ", pending_ip_list)
-
     client_list.append(get_machines_ip())
     client_list = list(set(client_list))
     if getleaderstatus():	
@@ -201,11 +190,6 @@ def tcp_server(tcp_port, is_leader, client_share, global_data=None):
                     )
                     client_thread.start()
                     print(f"Started thread for client {client_address}")
-            # elif tcp_connection_list is not None:
-            #     for conn in tcp_connection_list:
-            #         conn.close()
-            #     tcp_connection_list = []
-
 
     except KeyboardInterrupt:
         print("Server is shutting down.")
@@ -229,7 +213,7 @@ def udp_server(udp_port, tcp_port, is_leader_flag, lcr_obj=None, global_data=Non
         print(
             f"Follower server is waiting for broadcast messages on UDP port {udp_port}..."
         )
-    ##time.sleep(2)
+    
     while True:
         try:
             message, client_address = udp_socket.recvfrom(4096)
@@ -240,7 +224,6 @@ def udp_server(udp_port, tcp_port, is_leader_flag, lcr_obj=None, global_data=Non
                 # Leader responds to server broadcast messages
                 if message.startswith("NEW_SERVER"):
                     pending_ip_list.append(client_address[0])
-                    # server_group.append(client_address)
                     received_uid = str(message.split()[2])
                     lcr_obj.create_IP_UID_mapping(client_address[0], received_uid)
                     server_group = update_ip_list(server_group, client_address, lcr_obj.IP_UID_mapping)
@@ -254,7 +237,6 @@ def udp_server(udp_port, tcp_port, is_leader_flag, lcr_obj=None, global_data=Non
                     lcr_obj.is_a_pariticipant=True
                 # Handle client inquiries to identify the leader
                 elif message == "WHO_IS_LEADER":
-                    # global_data.setglobalflag(True)
                     leader_info = f"LEADER {tcp_port}"
                     udp_socket.sendto(leader_info.encode(), client_address)
                     print(f"Sent leader information to client {client_address}.")
@@ -273,7 +255,6 @@ def udp_server(udp_port, tcp_port, is_leader_flag, lcr_obj=None, global_data=Non
                     is_server_group_updated = True
                     lcr_obj.election_done = False
                     pending_ip_list = [server[0] for server in server_group]
-                    # print("pending ip list after update is ", pending_ip_list)
 
             else:
                 # Followers listen for leader acknowledgment or respond to client inquiries
@@ -287,8 +268,6 @@ def udp_server(udp_port, tcp_port, is_leader_flag, lcr_obj=None, global_data=Non
                     is_server_group_updated = True
                     print("updated server group from leader is", server_group)
                     pending_ip_list = [server[0] for server in server_group]
-                    # update the server group here
-
         except KeyboardInterrupt:
             print("Shutting down UDP server.")
             break
@@ -324,7 +303,6 @@ def leader_election(udp_port, broadcast_ip, lcr_obj=None):
     print("Broadcasting leader election message...")
     newserver_message = f"NEW_SERVER = {lcr_obj.uid}"
     udp_socket.sendto(newserver_message.encode(), (broadcast_ip, udp_port))
-    #lcr_obj.is_a_pariticipant = False
 
     udp_socket.settimeout(TIMEOUT)
     try:
@@ -354,9 +332,6 @@ def start_election(udp_port, broadcast_ip):
     print("Asking server to broadcast server group...")
     udp_socket.sendto("SEND_SERVER_GROUP".encode(), (broadcast_ip, udp_port))
     i_initiated_election = True
-    # use this when we do not receive a response of server_group from leader
-    # this happens when the leader is not present
-    # udp_socket.settimeout(TIMEOUT)
     udp_socket.close()
 
 
@@ -373,7 +348,6 @@ def do_serialization(clientsharehandler, sharehandler, client_share, lcr_obj):
     :param objects: Objects to serialize.
     :return: Serialized binary data.
     """
-    # maybe globalize the objects? also initiate them at the beginning with None
     serialized_data = []
     serialized_data.append(json.dumps(clientsharehandler, cls=share_handler.ClientShareHandlerEncoder))
     serialized_data.append(json.dumps(sharehandler, cls=share_handler.shareHandlerEncoder))
@@ -423,7 +397,6 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehand
         elif not FIRST_TIME and lcr_obj.election_done:
             if lcr_obj.get_leader_status():
                 if not getleaderstatus():
-                    #data = lcr_obj.udp_socket.recvfrom(4096)
                     try:
                         while True:
                             received_data, addr = lcr_obj.udp_socket.recvfrom(4096)  # Buffer size of 1024 bytes
@@ -440,7 +413,6 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehand
                             print("Received serialized object list from leader", list_of_dicts)
                             clientsharehandler = share_handler.clientshare_handler.from_dict(list_of_dicts[0])
                             sharehandler = share_handler.share_handler.from_dict(list_of_dicts[1])
-                            # client_share = managingRequestfromClient.from_dict(list_of_dicts[2])
                             client_share = managingRequestfromClient(sharehandler, clientsharehandler, 'FOLLOWER')
                             lcr_obj.IP_UID_mapping = list_of_dicts[3]
                             lcr_obj.UID_IP_mapping = list_of_dicts[4]
@@ -471,8 +443,6 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehand
                         conn.close()
 
 
-
-
 if __name__ == "__main__":
     sharehandler = None
     BROADCAST_IP = "192.168.0.255"
@@ -499,8 +469,6 @@ if __name__ == "__main__":
 
     if getleaderstatus():
         sharehandler = share_handler.share_handler()
-        #MY_HOST = socket.gethostname()
-        #MY_IP = socket.gethostbyname(MY_HOST)
         clientsharehandler = share_handler.clientshare_handler(
                         0, 0, 'LEADER')
         client_share = managingRequestfromClient(

@@ -32,7 +32,6 @@ class HeartbeatManager:
     
     def is_connected_to_internet(self):
         try:
-            # Check if we can resolve a hostname (Google's public DNS server)
             socket.create_connection(("8.8.8.8", 53), timeout=5)
             return True
         except OSError:
@@ -44,7 +43,6 @@ class HeartbeatManager:
         counter=0
         self.temp_client_list = []
         while counter < 2:
-            # print("count is ", counter, " ", time.time())
             while (time.time() - start_time) < 4:
                 try:
                     data, addr = self.udp_socket.recvfrom(1024)
@@ -52,10 +50,8 @@ class HeartbeatManager:
                         self.temp_client_list.append(addr[0])
                         print(f"Received response from {addr[0]}")
                 except TimeoutError:
-                    # print("BlockingIOError data not received")
                     pass
                 except BlockingIOError:
-                    # print("BlockingIOError data not received")
                     pass
             counter+=1
         if(not len(self.previous_temp_client_list)):
@@ -81,7 +77,6 @@ class HeartbeatManager:
         """Monitor the list of active clients."""
         while True:
             time.sleep(3)
-            # with self.lock:
             if self.client_list:
                 print(f"Active clients: {self.client_list}")
             else:
@@ -121,19 +116,13 @@ class HeartbeatManager:
                             if(counter >= 1):
                                 if(self.is_connected_to_internet()):
                                     server_group_local = self.filter_server_group(temp_client_list.copy(), self.lcr_obj)
-                                    # for server in server_group_local:
-                                    #     if addr[0] == server[0][0]:
-                                    #         leader_info = server[0][0]
-                                    #server_group_local.remove(leader_info)
                                     self.lcr_obj.election_done = False
-                                    #self.filter_server_group(server_group_local, self.lcr_obj)
                                     self.setservergroupupdatedflag(True)
                                     if(len(server_group_local) == 1):
                                         is_leader, server_group = self.leader_election(12345,'192.168.0.255', self.lcr_obj)
                                         self.global_flag_obj.setleaderflag(is_leader)
                                         pass
                                     else:
-                                        # initialte elction
                                         pass
                                     counter = 0
                             else:
@@ -146,7 +135,6 @@ class HeartbeatManager:
 
     def respond_to_server(self, addr, start_time):
         """Send 'I AM THERE' response to the server."""
-        # with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp_socket:
         response = "I AM THERE"
         self.udp_socket.sendto(response.encode(), addr)
         print(f"Sent response to {addr}")

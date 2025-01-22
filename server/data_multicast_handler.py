@@ -79,76 +79,57 @@ class MulticastHandler:
         Receive serialized data from the multicast group and deserialize it.
         :return: Deserialized objects.
         """
-        # self.multicast_socket.settimeout(2)  # Timeout for recvfrom() in seconds
-        # try:
         start_time = time.time()
         data = None
         while (time.time() - start_time) < 1:
             try:
                 data, addr = self.multicast_socket.recvfrom(4096)
             except BlockingIOError:
-                # print("BlockingIOError data not received")
                 pass
         if data:
             return data.decode(), addr
         else:
             return 'NO_DATA', None
-        # except socket.timeout:
-        #     print('No multicast data received')
-        #     return 'NO_DATA'
 
     def receive_unicast_data(self):
         """
         Receive serialized data from the multicast group and deserialize it.
         :return: Deserialized objects.
         """
-        # self.multicast_socket.settimeout(2)  # Timeout for recvfrom() in seconds
-        # try:
         start_time = time.time()
         data = None
         while (time.time() - start_time) < 1:
             try:
                 data, addr = self.udp_socket.recvfrom(4096)
             except BlockingIOError:
-                # print("BlockingIOError data not received")
                 pass
         if data:
             return data.decode(), addr
         else:
             return 'NO_DATA', None
-        # except socket.timeout:
-        #     print('No multicast data received')
-        #     return 'NO_DATA'
 
     def receive_sequence_request(self):
         """
         Receive serialized data from the multicast group and deserialize it.
         :return: Deserialized objects.
         """
-        # self.multicast_socket.settimeout(2)  # Timeout for recvfrom() in seconds
-        # try:
         start_time = time.time()
         data = None
         while (time.time() - start_time) < 1:
             try:
                 data, addr = self.udp_socket.recvfrom(4096)
             except BlockingIOError:
-                # print("BlockingIOError data not received")
                 pass
         print(data)
         if data:
             return int(data.decode().split(' ')[-1]), addr
         else:
             return 'NO_DATA', None
-        # except socket.timeout:
-        #     print('No multicast data received')
-        #     return 'NO_DATA'
 
     def deserialize_data(self, message):
         return ast.literal_eval(message)
     
     def changeintheobject(self):
-        # print("RESULT is ", self.prev_sharehandler == self.sharehandler)
         if self.prev_sharehandler == self.sharehandler:
             return False
         else:
@@ -196,12 +177,10 @@ class MulticastHandler:
         print("RECEIVED SEQUENCE NUMBER ", self.received_sequence_number)
         print("after ",self.clientsharehandler.number_of_shareA)
         self.sharehandler = share_handler.share_handler.from_dict(list_of_dicts[1])
-        # client_share = managingRequestfromClient.from_dict(list_of_dicts[2])
         self.client_share = managingRequestfromClient(self.sharehandler, self.clientsharehandler, 'FOLLOWER')
         self.lcr_obj.IP_UID_mapping = list_of_dicts[3]
         self.lcr_obj.UID_IP_mapping = list_of_dicts[4]
         print("MULTICAST DATA RECEIVED")
-        #self.expected_sequence_number += 1
 
         print("Dictionary is ",self.sequence_number_serialized_data_dict)
 
@@ -228,7 +207,6 @@ class MulticastHandler:
                         self.prev_sharehandler = copy.deepcopy(self.sharehandler)
                         self.prev_client_share = copy.deepcopy(self.client_share)
                         self.global_data.setnewserverjoinedflag(False)
-                    #self.prev_lcr_obj = copy.copy(self.lcr_obj)
             else:
                 if(self.first_time == True):
                     unicast_message = 'NEW_SERVER'
@@ -243,47 +221,7 @@ class MulticastHandler:
                 elif local_receivedunicastmessage!= 'NO_DATA' :
                     print("addr2 is ", addr2)
                     self.processthedata(local_receivedunicastmessage, addr2)                    
-                    # deserialized_message = self.deserialize_data(local_receivedmessage)
-                    # list_of_dicts = [json.loads(item) for item in deserialized_message]
-                    # if self.clientsharehandler is not None:
-                    #     print("before ", self.clientsharehandler.number_of_shareA)
-                    # self.clientsharehandler = share_handler.clientshare_handler.from_dict(list_of_dicts[0])
-                    # self.received_sequence_number = int(list_of_dicts[-1])
-                    # if self.received_sequence_number == self.expected_sequence_number:
-                    #     self.expected_sequence_number += 1
-                    #     self.sequence_number_serialized_data_dict[self.received_sequence_number] = list_of_dicts
-                    #     if self.holdback_queue is not None:
-                    #         for elements in self.holdback_queue:
-                    #             self.received_sequence_number = int(elements[-1])
-                    #             if self.received_sequence_number == self.expected_sequence_number:
-                    #                 self.expected_sequence_number += 1
-                    #                 self.sequence_number_serialized_data_dict[self.received_sequence_number] = list_of_dicts
-                    #             elif self.received_sequence_number > self.expected_sequence_number:
-                    #                 self.holdback_queue.append(list_of_dicts)
-                    #                 unicast_message = 'I NEED ' + str(self.expected_sequence_number)
-                    #                 #request data from leader server
-                    #                 self.udp_socket.sendto(unicast_message.encode(), (addr[0],12350))
-                    #             elif self.received_sequence_number < self.expected_sequence_number:
-                    #                 pass
-                    # elif self.received_sequence_number > self.expected_sequence_number:
-                    #     self.holdback_queue.append(list_of_dicts)
-                    #     #request data from leader server
-                    #     unicast_message = 'I NEED ' + str(self.expected_sequence_number)
-                    #     #request data from leader server
-                    #     self.multicast_socket.sendto(unicast_message.encode(), addr)
-                    # elif self.received_sequence_number < self.expected_sequence_number:
-                    #     pass
-                    # print("RECEIVED SEQUENCE NUMBER ", self.received_sequence_number)
-                    # print("after ",self.clientsharehandler.number_of_shareA)
-                    # self.sharehandler = share_handler.share_handler.from_dict(list_of_dicts[1])
-                    # # client_share = managingRequestfromClient.from_dict(list_of_dicts[2])
-                    # self.client_share = managingRequestfromClient(self.sharehandler, self.clientsharehandler, 'FOLLOWER')
-                    # self.lcr_obj.IP_UID_mapping = list_of_dicts[3]
-                    # self.lcr_obj.UID_IP_mapping = list_of_dicts[4]
-                    # print("MULTICAST DATA RECEIVED")
-                    # self.expected_sequence_number += 1
     
     def run(self):
         """Run the server threads."""
         threading.Thread(target=self.multicast_main, daemon=True).start()
-        # threading.Thread(target=self.listen_broadcasts, daemon=True).start()
