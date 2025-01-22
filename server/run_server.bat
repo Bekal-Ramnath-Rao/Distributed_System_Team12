@@ -1,1 +1,1 @@
-python server_chatgpt.py
+python server.py
