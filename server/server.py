@@ -261,6 +261,8 @@ def udp_server(udp_port, tcp_port, is_leader_flag, lcr_obj=None, global_data=Non
                     is_server_group_updated = True
                     print("updated server group from leader is", server_group)
                     pending_ip_list = [server[0] for server in server_group]
+                    unicast_message = 'MULTICAST PLEASE'
+                    udp_socket.sendto(unicast_message.encode(), (client_address[0],12350))
         except KeyboardInterrupt:
             print("Shutting down UDP server.")
             break

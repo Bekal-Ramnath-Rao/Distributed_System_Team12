@@ -122,6 +122,8 @@ class MulticastHandler:
                 pass
         print(data)
         if data:
+            if data.decode() == 'MULTICAST PLEASE':
+                return 'MULTICAST PLEASE', None 
             return int(data.decode().split(' ')[-1]), addr
         else:
             return 'NO_DATA', None
@@ -193,10 +195,7 @@ class MulticastHandler:
                         if requested_sequence_number in self.sequence_number_serialized_data_dict.keys():
                             requested_data = self.sequence_number_serialized_data_dict[requested_sequence_number]
                             self.udp_socket.sendto(json.dumps(requested_data).encode(), addr)
-                        elif requested_sequence_number == 'NEW_SERVER':
-                            initial_data = self.sequence_number_serialized_data_dict[self.sequence_number]
-                            self.udp_socket.sendto(json.dumps(initial_data).encode(), addr)                           
-                    if self.changeintheobject():
+                    if self.changeintheobject() or requested_sequence_number == 'MULTICAST PLEASE':
                         serailized_data = self.doserialization(self.clientsharehandler, self.sharehandler, self.client_share, self.lcr_obj)
                         serailized_data.append(str(self.sequence_number))
                         self.sequence_number_serialized_data_dict[self.sequence_number] = serailized_data
@@ -208,11 +207,6 @@ class MulticastHandler:
                         self.prev_client_share = copy.deepcopy(self.client_share)
                         self.global_data.setnewserverjoinedflag(False)
             else:
-                if(self.first_time == True):
-                    unicast_message = 'NEW_SERVER'
-                    self.udp_socket.sendto(unicast_message.encode(), (addr[0],12350))
-                    self.first_time = False
-                self.udp_socket.sendto(unicast_message.encode(), (addr[0],12350))
                 local_receivedmessage, addr1 = self.receive_multicast_data()
                 local_receivedunicastmessage, addr2 = self.receive_unicast_data()
                 if local_receivedmessage != 'NO_DATA' :
