@@ -114,6 +114,10 @@ class share_handler:
         if isinstance(other, share_handler):
             return self.share_A == other.share_A and self.share_B == other.share_B
         return False
+    
+    def __str__(self):
+        print('Share A:', self.share_A)
+        print('Share B:', self.share_B)
 
 # Custom JSON Encoder
 class shareHandlerEncoder(json.JSONEncoder):
@@ -171,6 +175,10 @@ class clientshare_handler:
                   and self.number_of_shareB == other.number_of_shareB \
                   and self.client_data == other.client_data
         return False
+    
+    def __str__(self):
+        return 'client data' + str(self.client_data)
+        # print('Share B:', self.share_B)
 
 
 # Custom JSON Encoder

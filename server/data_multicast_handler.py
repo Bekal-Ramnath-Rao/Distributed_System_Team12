@@ -136,6 +136,8 @@ class MulticastHandler:
         return ast.literal_eval(message)
     
     def changeintheobject(self):
+        print("prev_clientsharehandler is ",self.prev_clientsharehandler)
+        print("clientsharehandler is ",self.clientsharehandler)
         if self.prev_sharehandler == self.sharehandler:
             return False
         else:
@@ -200,7 +202,7 @@ class MulticastHandler:
                         if requested_sequence_number in self.sequence_number_serialized_data_dict.keys():
                             requested_data = self.sequence_number_serialized_data_dict[requested_sequence_number]
                             self.udp_socket.sendto(json.dumps(requested_data).encode(), addr)
-                    if self.changeintheobject() or requested_sequence_number == 'MULTICAST PLEASE':
+                    if self.changeintheobject():
                         serailized_data = self.doserialization(self.clientsharehandler, self.sharehandler, self.client_share, self.lcr_obj)
                         serailized_data.append(str(self.sequence_number))
                         self.sequence_number_serialized_data_dict[self.sequence_number] = serailized_data
@@ -213,11 +215,13 @@ class MulticastHandler:
                         self.prev_client_share = copy.deepcopy(self.client_share)
                         self.global_data.setnewserverjoinedflag(False)
             else:
+                
                 if first_time:
                     # self.expected_sequence_number = 1
                     self.dict_socket.sendto(json.dumps(self.sequence_number_serialized_data_dict).encode(), ("192.168.0.255", 12351))
                     first_time = False    
                 local_receivedmessage, addr1 = self.receive_multicast_data()
+                print("local_receivedmessage is ",local_receivedmessage)
                 local_receivedunicastmessage, addr2 = self.receive_unicast_data()
                 if local_receivedmessage != 'NO_DATA' :
                     print("addr1 is ", addr1)
