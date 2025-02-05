@@ -48,6 +48,10 @@ class MulticastHandler:
         self.udp_socket.setblocking(False)
         self.udp_socket.bind(("", 12350))
 
+        self.dict_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.dict_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.dict_socket.bind(("", 12351)) 
+
         self.sequence_number = 0
         self.received_sequence_number = 0
         self.expected_sequence_number = 0
@@ -187,6 +191,7 @@ class MulticastHandler:
         print("Dictionary is ",self.sequence_number_serialized_data_dict)
 
     def multicast_main(self):
+        first_time = True
         while True:
             if self.getleaderstatus():
                     requested_sequence_number, addr = self.receive_sequence_request()
@@ -200,6 +205,7 @@ class MulticastHandler:
                         serailized_data.append(str(self.sequence_number))
                         self.sequence_number_serialized_data_dict[self.sequence_number] = serailized_data
                         self.sequence_number += 1
+                        self.expected_sequence_number += 1
                         
                         self.multicast_data_periodically(serailized_data)
                         self.prev_clientsharehandler = copy.deepcopy(self.clientsharehandler)
@@ -207,6 +213,10 @@ class MulticastHandler:
                         self.prev_client_share = copy.deepcopy(self.client_share)
                         self.global_data.setnewserverjoinedflag(False)
             else:
+                if first_time:
+                    # self.expected_sequence_number = 1
+                    self.dict_socket.sendto(json.dumps(self.sequence_number_serialized_data_dict).encode(), ("192.168.0.255", 12351))
+                    first_time = False    
                 local_receivedmessage, addr1 = self.receive_multicast_data()
                 local_receivedunicastmessage, addr2 = self.receive_unicast_data()
                 if local_receivedmessage != 'NO_DATA' :
@@ -214,8 +224,18 @@ class MulticastHandler:
                     self.processthedata(local_receivedmessage, addr1)
                 elif local_receivedunicastmessage!= 'NO_DATA' :
                     print("addr2 is ", addr2)
-                    self.processthedata(local_receivedunicastmessage, addr2)                    
+                    self.processthedata(local_receivedunicastmessage, addr2)
+    
+    def dict_listener(self):
+        while True:
+            data, addr = self.dict_socket.recvfrom(4096)
+            print("Received data from dictionary server")
+            print(data.decode())
+            # data = data.decode()
+            self.sequence_number_serialized_data_dict=json.loads(data.decode())
+            print("type is ",type(self.sequence_number_serialized_data_dict))               
     
     def run(self):
         """Run the server threads."""
         threading.Thread(target=self.multicast_main, daemon=True).start()
+        threading.Thread(target=self.dict_listener, daemon=True).start()
