@@ -210,7 +210,8 @@ class MulticastHandler:
                         self.sequence_number += 1
                         self.expected_sequence_number += 1
                         
-                        self.multicast_data_periodically(serailized_data)
+                        if not first_time_leader:
+                            self.multicast_data_periodically(serailized_data)
                         self.prev_clientsharehandler = copy.deepcopy(self.clientsharehandler)
                         self.prev_sharehandler = copy.deepcopy(self.sharehandler)
                         self.prev_client_share = copy.deepcopy(self.client_share)

@@ -55,6 +55,14 @@ newserverjoined = False
 tcp_connection_list=[]
 client_share = None
 
+def setsharehandlerobject(sharehandler_object):
+    global sharehandler
+    sharehandler = sharehandler_object
+
+def getsharehandlerobject():
+    global sharehandler
+    return sharehandler
+
 def setclientshareobject(client_share_object):
     global client_share
     client_share = client_share_object
@@ -461,13 +469,13 @@ if __name__ == "__main__":
     )
     time.sleep(1)
     udp_thread.start()
-
+    sharehandler = share_handler.share_handler()
+    clientsharehandler = share_handler.clientshare_handler(
+                    0, 0, 'LEADER')
+    client_share = managingRequestfromClient(
+                    sharehandler, clientsharehandler, 'LEADER')
+    
     if getleaderstatus():
-        sharehandler = share_handler.share_handler()
-        clientsharehandler = share_handler.clientshare_handler(
-                        0, 0, 'LEADER')
-        client_share = managingRequestfromClient(
-                        sharehandler, clientsharehandler, 'LEADER')
         setclientshareobject(client_share)
         clientobjectflag = True
         server_group.append((get_machines_ip(), SERVER_TCP_PORT, str(lcr_obj.uid)))
@@ -482,13 +490,13 @@ if __name__ == "__main__":
     else:
         udp_thread_for_election = threading.Thread(target=udp_server_managing_election,
                                                    args=(udp_socket_listener_for_election,
-                                                         lcr_obj, getleaderstatus(),None,None, None, global_data))
+                                                         lcr_obj, getleaderstatus(),clientsharehandler, sharehandler, client_share, global_data))
         client_share = None
         server_group = ast.literal_eval(server_group)
         heartbeat = hearbeat_handler.HeartbeatManager(12348, global_data, filter_server_group, setservergroupupdatedflag, lcr_obj, check_for_leader_server)
         heartbeat.run()
         start_election(SERVER_UDP_PORT, BROADCAST_IP)
-        multicaster = data_multicast_handler.MulticastHandler(global_data, None, None, None, lcr_obj, do_serialization,getleaderstatus,get_machines_ip())
+        multicaster = data_multicast_handler.MulticastHandler(global_data, getclientsharehandlerobject(), getsharehandlerobject(), getclientshareobject(), lcr_obj, do_serialization,getleaderstatus,get_machines_ip())
         multicaster.run()
     
     lcr_obj.create_IP_UID_mapping(get_machines_ip(), str(lcr_obj.uid))
