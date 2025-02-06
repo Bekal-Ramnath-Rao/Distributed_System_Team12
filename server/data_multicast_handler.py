@@ -74,22 +74,31 @@ class MulticastHandler:
         self.multicast_socket.sendto(json.dumps(serialized_data).encode(), (self.multicast_group, self.port))
         print(f"Data sent to multicast group {self.multicast_group}:{self.port}")
 
-    def receive_multicast_data(self):
+    def receive_multicast_data(self,first_time=False):
         """
         Receive serialized data from the multicast group and deserialize it.
         :return: Deserialized objects.
         """
         start_time = time.time()
         data = None
-        while (time.time() - start_time) < 1:
-            try:
-                data, addr = self.multicast_socket.recvfrom(4096)
-            except BlockingIOError:
-                pass
-        if data:
-            return data.decode(), addr
+        if(first_time):
+            while (1):
+                try:
+                    data, addr = self.multicast_socket.recvfrom(4096)
+                except BlockingIOError:
+                    pass
+                if data:
+                    return data.decode(), addr
         else:
-            return 'NO_DATA', None
+            while (time.time() - start_time) < 1:
+                try:
+                    data, addr = self.multicast_socket.recvfrom(4096)
+                except BlockingIOError:
+                    pass
+            if data:
+                return data.decode(), addr
+            else:
+                return 'NO_DATA', None
 
     def receive_unicast_data(self):
         """
@@ -140,7 +149,7 @@ class MulticastHandler:
     def get_sequence_number_serialized_data_dict(self, sequence_number):
         return self.sequence_number_serialized_data_dict[sequence_number]
     
-    def processthedata(self,local_receivedmessage, addr):
+    def processthedata(self,local_receivedmessage, addr, first_time=False):
         print("expected sequence number is ",self.expected_sequence_number)
         deserialized_message = self.deserialize_data(local_receivedmessage)
         list_of_dicts = [json.loads(item) for item in deserialized_message]
@@ -149,14 +158,19 @@ class MulticastHandler:
         self.clientsharehandler = share_handler.clientshare_handler.from_dict(list_of_dicts[0])
         self.received_sequence_number = int(list_of_dicts[-1])
         print("LIST OF DICTS IS ",list_of_dicts[-1])
-        if self.received_sequence_number == self.expected_sequence_number:
-            self.expected_sequence_number += 1
-            self.sequence_number_serialized_data_dict[self.received_sequence_number] = list_of_dicts
-        elif self.received_sequence_number > self.expected_sequence_number:
-            self.holdback_queue.append(list_of_dicts)
-            unicast_message = 'I NEED ' + str(self.expected_sequence_number)
-            #request data from leader server
-            self.udp_socket.sendto(unicast_message.encode(), (addr[0],12350))
+        if first_time == True:
+                self.expected_sequence_number = self.received_sequence_number
+                self.sequence_number_serialized_data_dict[self.received_sequence_number] = list_of_dicts
+                self.expected_sequence_number += 1
+        else:
+            if self.received_sequence_number == self.expected_sequence_number:
+                self.expected_sequence_number += 1
+                self.sequence_number_serialized_data_dict[self.received_sequence_number] = list_of_dicts
+            elif self.received_sequence_number > self.expected_sequence_number:
+                self.holdback_queue.append(list_of_dicts)
+                unicast_message = 'I NEED ' + str(self.expected_sequence_number)
+                #request data from leader server
+                self.udp_socket.sendto(unicast_message.encode(), (addr[0],12350))
         print('len of holdback queue', len(self.holdback_queue))
         if len(self.holdback_queue)!=0:
             holdback_queue_seq_number = self.holdback_queue[0][-1]
@@ -187,6 +201,7 @@ class MulticastHandler:
         print("Dictionary is ",self.sequence_number_serialized_data_dict)
 
     def multicast_main(self):
+        first_time = True
         while True:
             if self.getleaderstatus():
                     requested_sequence_number, addr = self.receive_sequence_request()
@@ -207,14 +222,22 @@ class MulticastHandler:
                         self.prev_client_share = copy.deepcopy(self.client_share)
                         self.global_data.setnewserverjoinedflag(False)
             else:
-                local_receivedmessage, addr1 = self.receive_multicast_data()
-                local_receivedunicastmessage, addr2 = self.receive_unicast_data()
-                if local_receivedmessage != 'NO_DATA' :
-                    print("addr1 is ", addr1)
-                    self.processthedata(local_receivedmessage, addr1)
-                elif local_receivedunicastmessage!= 'NO_DATA' :
-                    print("addr2 is ", addr2)
-                    self.processthedata(local_receivedunicastmessage, addr2)                    
+                    if first_time == True:
+                        local_receivedunicastmessage, addr2 = self.receive_multicast_data(first_time)
+                        if local_receivedunicastmessage!= 'NO_DATA' :
+                            print("addr2 is ", addr2)
+                            self.processthedata(local_receivedunicastmessage, addr2,first_time)
+                            if 'I NEED' not in local_receivedunicastmessage: 
+                                first_time = False    
+                    else:
+                        local_receivedmessage, addr1 = self.receive_multicast_data(first_time)
+                        local_receivedunicastmessage, addr2 = self.receive_unicast_data()
+                        if local_receivedmessage != 'NO_DATA' :
+                            print("addr1 is ", addr1)
+                            self.processthedata(local_receivedmessage, addr1)
+                        elif local_receivedunicastmessage!= 'NO_DATA' :
+                            print("addr2 is ", addr2)
+                            self.processthedata(local_receivedunicastmessage, addr2)                    
     
     def run(self):
         """Run the server threads."""
