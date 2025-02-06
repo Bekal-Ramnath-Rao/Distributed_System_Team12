@@ -8,14 +8,14 @@
             "name": "serverchatgpt",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}\\server\\server_chatgpt.py",
+            "program": "${workspaceFolder}\\server\\server.py",
             "console": "integratedTerminal"
         },
         {
             "name": "clientchatgpt",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}\\client\\client_chatgpt_new.py",
+            "program": "${workspaceFolder}\\client\\client.py",
             "console": "integratedTerminal"
         }
     ]

@@ -116,8 +116,7 @@ class share_handler:
         return False
     
     def __str__(self):
-        print('Share A:', self.share_A)
-        print('Share B:', self.share_B)
+        return 'Share A:'+ str(self.share_A) + 'Share B:' + str(self.share_B)
 
 # Custom JSON Encoder
 class shareHandlerEncoder(json.JSONEncoder):
