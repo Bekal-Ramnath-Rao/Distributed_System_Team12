@@ -101,9 +101,7 @@ class HeartbeatManager:
                         try:
                             data, addr = self.udp_socket.recvfrom(1024)
                             message = data.decode()
-                            print(message)
                             if message == "ARE YOU THERE":
-                                print(f"Received broadcast from {addr}")
                                 self.respond_to_server(addr,start_time)
                             elif message.startswith("SERVER_GROUP"):
                                 for server in ast.literal_eval(message[13:]):
@@ -135,5 +133,4 @@ class HeartbeatManager:
         """Send 'I AM THERE' response to the server."""
         response = "I AM THERE"
         self.udp_socket.sendto(response.encode(), addr)
-        print(f"Sent response to {addr}")
 

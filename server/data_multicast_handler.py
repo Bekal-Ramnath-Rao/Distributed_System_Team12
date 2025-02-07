@@ -200,7 +200,7 @@ class MulticastHandler:
                             self.udp_socket.sendto(json.dumps(requested_data).encode(), addr)
                         elif(requested_sequence_number == 'MULTICAST PLEASE'):
                             if len(self.sequence_number_serialized_data_dict) != 0:
-                                self.udp_socket.sendto(json.dumps(self.sequence_number_serialized_data_dict).encode(),addr)
+                                self.udp_socket.sendto(json.dumps(self.sequence_number_serialized_data_dict).encode(),(addr[0],12351))
                     if self.changeintheobject():
                         serailized_data = self.doserialization(self.clientsharehandler, self.sharehandler, self.client_share, self.lcr_obj)
                         serailized_data.append(str(self.sequence_number))
@@ -227,9 +227,11 @@ class MulticastHandler:
     
     def dict_listener(self):
         while True:
-            data, addr = self.dict_socket.recvfrom(4096)
+            data, addr = self.dict_socket.recvfrom(65535)
             # data = data.decode()
-            self.sequence_number_serialized_data_dict=json.loads(data.decode())              
+            self.sequence_number_serialized_data_dict=json.loads(data.decode()) 
+            self.sequence_number = len(self.sequence_number_serialized_data_dict)
+            self.expected_sequence_number = len(self.sequence_number_serialized_data_dict) + 1             
     
     def run(self):
         """Run the server threads."""

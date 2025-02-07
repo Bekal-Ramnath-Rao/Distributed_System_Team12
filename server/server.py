@@ -212,7 +212,7 @@ def udp_server(udp_port, tcp_port, is_leader_flag, lcr_obj=None, global_data=Non
     
     while True:
         try:
-            message, client_address = udp_socket.recvfrom(4096)
+            message, client_address = udp_socket.recvfrom(65535)
             message = message.decode()
             print(f"Received message '{message}' from {client_address}")
 
