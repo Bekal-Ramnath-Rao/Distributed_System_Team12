@@ -116,7 +116,6 @@ def filter_server_group(client_list, lcr_obj):
     # Retain only those tuples in the server group where the IP address matches
     if not lcr_obj.is_a_pariticipant:
         server_group = [server for server in server_group if server[0] in client_list]
-    print("server group after filtering ", server_group)
     return server_group
 
 def handle_client(conn, client_address,client_share = None, global_data=None):
@@ -128,7 +127,6 @@ def handle_client(conn, client_address,client_share = None, global_data=None):
                 client_message = conn.recv(1024).decode()
                 
                 if not client_message or client_message.lower() == "exit":
-                    print(f"Client {client_address} requested to close the connection.")
                     break
                 else:
                     # Process the request as the leader
@@ -190,12 +188,9 @@ def tcp_server(tcp_port, is_leader, client_share, global_data=None):
                         target=handle_client, args=(conn, client_address, getclientshareobject(), global_data)
                     )
                     client_thread.start()
-                    print(f"Started thread for client {client_address}")
 
     except KeyboardInterrupt:
-        print("Server is shutting down.")
         tcp_socket.close()
-        print("TCP server closed.")
 
 
 def udp_server(udp_port, tcp_port, is_leader_flag, lcr_obj=None, global_data=None):
@@ -232,7 +227,6 @@ def udp_server(udp_port, tcp_port, is_leader_flag, lcr_obj=None, global_data=Non
                         f"ACK_LEADER {tcp_port} SERVER_GROUP {server_group}"
                     )
                     udp_socket.sendto(unicast_message.encode(), client_address)
-                    print(f"Added new server {client_address} to the group.")
                     print("current server group is ", server_group)
                     global_data.setnewserverjoinedflag(True)
                     lcr_obj.is_a_pariticipant=True
@@ -240,15 +234,9 @@ def udp_server(udp_port, tcp_port, is_leader_flag, lcr_obj=None, global_data=Non
                 elif message == "WHO_IS_LEADER":
                     leader_info = f"LEADER {tcp_port}"
                     udp_socket.sendto(leader_info.encode(), client_address)
-                    print(f"Sent leader information to client {client_address}.")
                 elif message == "SEND_SERVER_GROUP":
                     server_group = update_ip_list(server_group, client_address, lcr_obj.IP_UID_mapping)
                     server_group_str = "UPDATED_SERVER_GROUP " + str(server_group)
-                    print(
-                        "server group before sending to all clients is ",
-                        server_group_str,
-                    )
-                    print(client_address)
                     udp_socket.sendto(
                         server_group_str.encode(), ("192.168.0.255", 12345)
                     )
@@ -272,11 +260,9 @@ def udp_server(udp_port, tcp_port, is_leader_flag, lcr_obj=None, global_data=Non
                     unicast_message = 'MULTICAST PLEASE'
                     udp_socket.sendto(unicast_message.encode(), (client_address[0],12350))
         except KeyboardInterrupt:
-            print("Shutting down UDP server.")
             break
 
     udp_socket.close()
-    print("UDP server closed.")
 
 
 def update_ip_list(ip_list, new_tuple, IP_UID_mapping=None):
@@ -391,7 +377,6 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehand
             except BlockingIOError:
             # This exception occurs when the buffer is empty
                 if latest_message is not None:
-                    print("\nBuffer is empty. Processing the latest message:")
                     lcr_obj.process_received_message(latest_message)
                     latest_message = None  # Reset after processing
 
@@ -401,13 +386,11 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehand
                     try:
                         while True:
                             received_data, addr = lcr_obj.udp_socket.recvfrom(4096)  # Buffer size of 1024 bytes
-                            print(f"Received message: {received_data.decode()} from {addr}")
                             latest_message = received_data
                         
                     except BlockingIOError:
                         # This exception occurs when the buffer is empty
                         if latest_message is not None:
-                            print("\nBuffer is empty. Processing the latest message:")
                             deserialized_object = latest_message.decode()
                             deserialized_object_list  = ast.literal_eval(deserialized_object)
                             list_of_dicts = [json.loads(item) for item in deserialized_object_list]
@@ -415,7 +398,6 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehand
                             clientsharehandler = share_handler.clientshare_handler.from_dict(list_of_dicts[0])
                             sharehandler = share_handler.share_handler.from_dict(list_of_dicts[1])
                             client_share = managingRequestfromClient(sharehandler, clientsharehandler, 'FOLLOWER')
-                            print('ID in server side ',id(clientsharehandler))
                             lcr_obj.IP_UID_mapping = list_of_dicts[3]
                             lcr_obj.UID_IP_mapping = list_of_dicts[4]
                             setleaderstatus(True)
@@ -442,7 +424,6 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehand
                     lcr_obj.election_done = False
                     lcr_obj.is_leader=False
                     FIRST_TIME = True
-                    print("tcp_connection_list", tcp_connection_list)
                     for conn in tcp_connection_list:
                         conn.close()
 

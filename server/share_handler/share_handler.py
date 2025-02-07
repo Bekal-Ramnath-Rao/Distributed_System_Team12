@@ -53,7 +53,6 @@ class share_handler:
             self.share_B = share('B', 5000)
 
     def buy(self, number_of_share, name_of_the_share, clientshare_handler, client_name):
-        print('you are making a buy')
         if name_of_the_share == 'A':
             print('No of shares available:', self.share_A.number_of_shares)
             if self.share_A.number_of_shares >= number_of_share:
@@ -72,7 +71,6 @@ class share_handler:
                 return False
 
     def sell(self, number_of_share, name_of_the_share, clientshare_handler, client_name):
-        print('you are making a sell')
         if name_of_the_share == 'A':
             if client_name not in clientshare_handler.client_data:
                     clientshare_handler.client_data[client_name] = {'A': 0, 'B': 0}
@@ -177,7 +175,6 @@ class clientshare_handler:
     
     def __str__(self):
         return 'client data' + str(self.client_data)
-        # print('Share B:', self.share_B)
 
 
 # Custom JSON Encoder

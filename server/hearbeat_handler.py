@@ -56,8 +56,6 @@ class HeartbeatManager:
             counter+=1
         if(not len(self.previous_temp_client_list)):
             self.previous_temp_client_list = self.temp_client_list.copy()
-        print("temp_client_list is ", self.temp_client_list)
-        print("previous temp client list", self.previous_temp_client_list) 
         # considering a glitch for UDP
         if (set(self.temp_client_list) != set(self.previous_temp_client_list)): 
             if(self.compare_counter < 1) :
