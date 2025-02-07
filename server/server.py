@@ -365,7 +365,6 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehand
     FIRST_TIME = True
     latest_message = None
     while True:
-
         if is_server_group_updated:
             lcr_obj.group_view = server_group
             lcr_obj.form_members(server_group)
@@ -416,17 +415,20 @@ def udp_server_managing_election(udp_socket, lcr_obj, is_leader, clientsharehand
                             clientsharehandler = share_handler.clientshare_handler.from_dict(list_of_dicts[0])
                             sharehandler = share_handler.share_handler.from_dict(list_of_dicts[1])
                             client_share = managingRequestfromClient(sharehandler, clientsharehandler, 'FOLLOWER')
+                            print('ID in server side ',id(clientsharehandler))
                             lcr_obj.IP_UID_mapping = list_of_dicts[3]
                             lcr_obj.UID_IP_mapping = list_of_dicts[4]
                             setleaderstatus(True)
                             global_data.setleaderflag(True)
                             setclientshareobject(client_share) 
-                            setclientsharehandlerobject(clientsharehandler)                    
+                            setclientsharehandlerobject(clientsharehandler)
+                            setsharehandlerobject(sharehandler)                   
                             FIRST_TIME = True
                             lcr_obj.election_done = False
                             lcr_obj.is_leader=True
                             FIRST_TIME = True
                             latest_message = None  # Reset after processing
+
 
             else:
                 if getleaderstatus():
