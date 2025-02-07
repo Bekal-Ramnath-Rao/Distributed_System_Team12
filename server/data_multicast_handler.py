@@ -9,7 +9,7 @@ import copy
 import struct
 import time 
 class MulticastHandler:
-    def __init__(self, global_data, clientsharehandler, sharehandler, client_share, lcr_obj, doserialization,getleaderstatus, my_ip='0.0.0.0'):
+    def __init__(self, global_data, clientsharehandler, sharehandler, client_share, lcr_obj, doserialization,getleaderstatus, my_ip='0.0.0.0',getclientsharehandlerobject, getclientshareobject,getsharehandlerobject):
         """
         Initialize the multicast handler.
         :param multicast_group: Multicast group IP address.
@@ -25,6 +25,9 @@ class MulticastHandler:
         self.clientsharehandler = clientsharehandler
         self.sharehandler = sharehandler
         self.client_share = client_share
+        self.getclientshareobject = getclientshareobject
+        self.getsharehandlerobject = getsharehandlerobject
+        self.getclientshareobject = getclientshareobject
         self.lcr_obj = lcr_obj
         self.prev_clientsharehandler = None
         self.prev_sharehandler = None
@@ -197,6 +200,9 @@ class MulticastHandler:
         first_time_leader = True
         while True:
             if self.getleaderstatus():
+                    self.clientshareobject = self.getclientshareobject()
+                    self.sharehandlerobject = self.getsharehandlerobject()
+                    self.clientshareobject = self.getclientshareobject()
                     requested_sequence_number, addr = self.receive_sequence_request()
                     print('requested sequence number ',requested_sequence_number)
                     if requested_sequence_number != 'NO_DATA':
