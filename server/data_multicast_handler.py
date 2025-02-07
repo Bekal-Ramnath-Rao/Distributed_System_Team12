@@ -156,6 +156,7 @@ class MulticastHandler:
         if self.clientsharehandler is not None:
             print("before ", self.clientsharehandler.number_of_shareA)
         self.clientsharehandler = share_handler.clientshare_handler.from_dict(list_of_dicts[0])
+        print('ID in process the data ',id(self.clientsharehandler))
         self.received_sequence_number = int(list_of_dicts[-1])
         print("LIST OF DICTS IS ",list_of_dicts[-1])
         if self.received_sequence_number == self.expected_sequence_number:
@@ -200,9 +201,10 @@ class MulticastHandler:
         first_time_leader = True
         while True:
             if self.getleaderstatus():
-                    self.clientsharehandlerobject = self.getclientsharehandlerobject()
-                    self.sharehandlerobject = self.getsharehandlerobject()
-                    self.clientshareobject = self.getclientshareobject()
+                    self.clientsharehandler = self.getclientsharehandlerobject()
+                    print('ID in main leader ',id(self.clientsharehandler))
+                    self.sharehandler = self.getsharehandlerobject()
+                    self.clientshare = self.getclientshareobject()
                     requested_sequence_number, addr = self.receive_sequence_request()
                     print('requested sequence number ',requested_sequence_number)
                     if requested_sequence_number != 'NO_DATA':
@@ -224,7 +226,7 @@ class MulticastHandler:
                         self.global_data.setnewserverjoinedflag(False)
                         first_time_leader = False
             else:
-                
+                print('ID in main subserver ',id(self.clientsharehandler))
                 if first_time_subserver:
                     # self.expected_sequence_number = 1
                     self.dict_socket.sendto(json.dumps(self.sequence_number_serialized_data_dict).encode(), ("192.168.0.255", 12351))
