@@ -129,7 +129,7 @@ class MulticastHandler:
                 pass
         if data:
             if data.decode() == 'MULTICAST PLEASE':
-                return 'MULTICAST PLEASE', None 
+                return 'MULTICAST PLEASE', addr 
             return int(data.decode().split(' ')[-1]), addr
         else:
             return 'NO_DATA', None
