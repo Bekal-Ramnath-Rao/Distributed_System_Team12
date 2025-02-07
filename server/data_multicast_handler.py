@@ -248,6 +248,7 @@ class MulticastHandler:
             print(data.decode())
             # data = data.decode()
             self.sequence_number_serialized_data_dict=json.loads(data.decode())
+            self.sequence_number = len(self.sequence_number_serialized_data_dict) + 1
             print("type is ",type(self.sequence_number_serialized_data_dict))               
     
     def run(self):
