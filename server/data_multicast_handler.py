@@ -9,7 +9,7 @@ import copy
 import struct
 import time 
 class MulticastHandler:
-    def __init__(self, global_data, clientsharehandler, sharehandler, client_share, lcr_obj, doserialization,getleaderstatus, my_ip='0.0.0.0',getclientsharehandlerobject, getclientshareobject,getsharehandlerobject):
+    def __init__(self, global_data, clientsharehandler, sharehandler, client_share, lcr_obj, doserialization,getleaderstatus, getclientsharehandlerobject, getclientshareobject,getsharehandlerobject, my_ip='0.0.0.0'):
         """
         Initialize the multicast handler.
         :param multicast_group: Multicast group IP address.
