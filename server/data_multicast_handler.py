@@ -25,7 +25,7 @@ class MulticastHandler:
         self.clientsharehandler = clientsharehandler
         self.sharehandler = sharehandler
         self.client_share = client_share
-        self.getclientshareobject = getclientshareobject
+        self.getclientsharehandlerobject = getclientsharehandlerobject
         self.getsharehandlerobject = getsharehandlerobject
         self.getclientshareobject = getclientshareobject
         self.lcr_obj = lcr_obj
@@ -200,7 +200,7 @@ class MulticastHandler:
         first_time_leader = True
         while True:
             if self.getleaderstatus():
-                    self.clientshareobject = self.getclientshareobject()
+                    self.clientsharehandlerobject = self.getclientsharehandlerobject()
                     self.sharehandlerobject = self.getsharehandlerobject()
                     self.clientshareobject = self.getclientshareobject()
                     requested_sequence_number, addr = self.receive_sequence_request()
