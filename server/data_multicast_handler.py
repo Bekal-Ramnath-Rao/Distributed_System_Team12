@@ -198,6 +198,9 @@ class MulticastHandler:
                         if requested_sequence_number in self.sequence_number_serialized_data_dict.keys():
                             requested_data = self.sequence_number_serialized_data_dict[requested_sequence_number]
                             self.udp_socket.sendto(json.dumps(requested_data).encode(), addr)
+                        elif(requested_sequence_number == 'MULTICAST PLEASE'):
+                            if len(self.sequence_number_serialized_data_dict) != 0:
+                                self.udp_socket.sendto(json.dumps(self.sequence_number_serialized_data_dict).encode(),addr)
                     if self.changeintheobject():
                         serailized_data = self.doserialization(self.clientsharehandler, self.sharehandler, self.client_share, self.lcr_obj)
                         serailized_data.append(str(self.sequence_number))
